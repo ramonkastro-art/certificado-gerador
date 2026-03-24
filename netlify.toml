@@ -1,0 +1,12 @@
+[build]
+  functions = "netlify/functions"
+  publish = "public"
+
+[[redirects]]
+  from = "/gerar-certificado"
+  to = "/.netlify/functions/gerar-certificado"
+  status = 200
+  force = true
+
+[functions]
+  included_files = ["netlify/functions/*.png", "netlify/functions/*.p12"]

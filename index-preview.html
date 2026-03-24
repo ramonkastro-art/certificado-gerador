@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Certificados — SMED Vacaria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #B8973A;
+      --gold-light: #D4AF5A;
+      --navy:       #0D1F3C;
+      --navy-mid:   #1A3260;
+      --cream:      #FAF8F3;
+      --cream-dark: #F0EDE4;
+      --text:       #2A2A2A;
+      --text-muted: #6B6B6B;
+      --border:     #DDD8CC;
+      --radius:     14px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(184,151,58,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(13,31,60,.06) 0%, transparent 60%);
+    }
+
+    /* Header */
+    .page-header { text-align: center; margin-bottom: 40px; }
+    .seal {
+      width: 68px; height: 68px;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px;
+      background: var(--navy);
+      box-shadow: 0 0 0 6px rgba(184,151,58,.15), 0 4px 20px rgba(13,31,60,.2);
+    }
+    .page-header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 600;
+      color: var(--navy);
+      letter-spacing: .02em;
+    }
+    .page-header p {
+      font-size: .8rem;
+      color: var(--text-muted);
+      font-weight: 300;
+      margin-top: 6px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    /* Card */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 40px rgba(13,31,60,.12), 0 2px 8px rgba(13,31,60,.06);
+      width: 100%;
+      max-width: 780px;
+      overflow: hidden;
+    }
+    .card-inner { padding: 40px 44px; }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--cream-dark);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 36px;
+      gap: 4px;
+    }
+    .mode-btn {
+      flex: 1; padding: 10px 16px;
+      border: none; background: transparent; cursor: pointer;
+      border-radius: 7px;
+      font-family: 'Jost', sans-serif;
+      font-size: .8rem; font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: .07em; text-transform: uppercase;
+      transition: all .25s;
+    }
+    .mode-btn.active {
+      background: var(--navy); color: #fff;
+      box-shadow: 0 2px 8px rgba(13,31,60,.25);
+    }
+
+    /* Section */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: .68rem; font-weight: 600;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(to right, var(--border), transparent);
+    }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
+
+    @media (max-width: 560px) {
+      .card-inner { padding: 28px 20px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .col-span-2, .col-span-3 { grid-column: auto; }
+    }
+
+    /* Fields */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: .73rem; font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'Jost', sans-serif; font-size: .9rem; color: var(--text);
+      background: var(--cream); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--navy-mid);
+      box-shadow: 0 0 0 3px rgba(26,50,96,.1);
+      background: #fff;
+    }
+
+    /* Multi-course */
+    #multi-mode { display: none; }
+    .course-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 12px; }
+    .course-item {
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 18px; background: var(--cream);
+      position: relative;
+      animation: slideIn .25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .remove-btn {
+      position: absolute; top: 12px; right: 12px;
+      background: none; border: none; cursor: pointer;
+      color: #ccc; font-size: 1rem; line-height: 1;
+      transition: color .2s; padding: 2px 6px;
+    }
+    .remove-btn:hover { color: #c0392b; }
+    .item-label {
+      font-size: .68rem; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 14px;
+    }
+    .add-course-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px;
+      border: 1.5px dashed var(--border); border-radius: 8px;
+      background: transparent; color: var(--text-muted);
+      font-family: 'Jost', sans-serif; font-size: .8rem; font-weight: 500;
+      letter-spacing: .07em; text-transform: uppercase;
+      cursor: pointer; transition: all .2s;
+    }
+    .add-course-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(184,151,58,.04); }
+
+    /* Submit */
+    .submit-wrap { margin-top: 36px; }
+    .submit-btn {
+      width: 100%; padding: 16px;
+      background: var(--navy); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Jost', sans-serif; font-size: .88rem; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: all .25s;
+      box-shadow: 0 4px 16px rgba(13,31,60,.25);
+      position: relative; overflow: hidden;
+    }
+    .submit-btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.06));
+      pointer-events: none;
+    }
+    .submit-btn:hover { background: var(--navy-mid); box-shadow: 0 6px 24px rgba(13,31,60,.35); transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn.loading { pointer-events: none; opacity: .75; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin .7s linear infinite; display: none;
+    }
+    .submit-btn.loading .spinner { display: block; }
+    .submit-btn.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-note {
+      text-align: center; font-size: .73rem;
+      color: var(--text-muted); margin-top: 24px; letter-spacing: .04em;
+    }
+    .footer-note strong { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="seal">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="14" stroke="#B8973A" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <path d="M18 6L20.8 14.2H29.4L22.3 19.3L25.1 27.5L18 22.4L10.9 27.5L13.7 19.3L6.6 14.2H15.2L18 6Z" fill="#B8973A"/>
+      </svg>
+    </div>
+    <h1>Emissão de Certificado</h1>
+    <p>Secretaria Municipal de Educação · Vacaria / RS</p>
+  </header>
+
+  <div class="card">
+    <div class="card-inner">
+
+      <div class="mode-toggle" role="tablist">
+        <button class="mode-btn active" onclick="setMode('single')" id="btn-single">Curso único</button>
+        <button class="mode-btn" onclick="setMode('multi')" id="btn-multi">Múltiplos cursos</button>
+      </div>
+
+      <form id="cert-form" action="/gerar-certificado" method="POST">
+        <input type="hidden" name="modo" id="modo-hidden" value="single">
+
+        <!-- Participante -->
+        <div class="section">
+          <div class="section-title">Participante</div>
+          <div class="field">
+            <label for="aluno">Nome completo do aluno</label>
+            <input type="text" id="aluno" name="aluno" required placeholder="Ex: Maria Fernanda Souza">
+          </div>
+        </div>
+
+        <!-- MODO ÚNICO -->
+        <div id="single-mode">
+          <div class="section">
+            <div class="section-title">Curso / Treinamento</div>
+            <div class="grid-2" style="margin-bottom:14px">
+              <div class="field col-span-2">
+                <label for="curso">Nome do curso</label>
+                <input type="text" id="curso" name="curso" placeholder="Ex: Primeiros Socorros — Lei Lucas">
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="field">
+                <label for="horas">Carga horária (h)</label>
+                <input type="number" id="horas" name="horas" min="1" placeholder="40">
+              </div>
+              <div class="field">
+                <label for="data_inicio">Data de início</label>
+                <input type="date" id="data_inicio" name="data_inicio">
+              </div>
+              <div class="field">
+                <label for="data_fim">Data de término</label>
+                <input type="date" id="data_fim" name="data_fim">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Instrutor &amp; Local</div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="palestrante">Instrutor / Palestrante</label>
+                <input type="text" id="palestrante" name="palestrante" placeholder="Prof. João da Silva">
+              </div>
+              <div class="field">
+                <label for="local">Local de realização</label>
+                <input type="text" id="local" name="local" placeholder="Vacaria, RS">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODO MÚLTIPLO -->
+        <div id="multi-mode">
+          <div class="section">
+            <div class="section-title">Dados gerais</div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="m-palestrante">Instrutor / Palestrante</label>
+                <input type="text" id="m-palestrante" name="m_palestrante" placeholder="Prof. João da Silva">
+              </div>
+              <div class="field">
+                <label for="m-local">Local de realização</label>
+                <input type="text" id="m-local" name="m_local" placeholder="Vacaria, RS">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Cursos realizados</div>
+            <div class="course-list" id="course-list"></div>
+            <button type="button" class="add-course-btn" onclick="addCourse()">
+              <span>＋</span> Adicionar curso
+            </button>
+          </div>
+        </div>
+
+        <div class="submit-wrap">
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <span class="spinner"></span>
+            <span class="btn-label">📜 &nbsp;Gerar &amp; baixar certificado</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Certificado assinado digitalmente com <strong>certificado ICP-Brasil</strong>.
+  </p>
+
+<script>
+let courseCount = 0;
+
+function setMode(mode) {
+  document.getElementById('modo-hidden').value = mode;
+  document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('multi-mode').style.display  = mode === 'multi'  ? '' : 'none';
+  document.getElementById('btn-single').classList.toggle('active', mode === 'single');
+  document.getElementById('btn-multi').classList.toggle('active',  mode === 'multi');
+
+  const singles = ['curso','horas','data_inicio','palestrante','local'];
+  singles.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.required = (mode === 'single');
+  });
+
+  if (mode === 'multi' && document.querySelectorAll('.course-item').length === 0) addCourse();
+}
+
+function addCourse() {
+  courseCount++;
+  const n = courseCount;
+  const list = document.getElementById('course-list');
+  const num = list.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'course-item';
+  div.id = `course-${n}`;
+  div.innerHTML = `
+    <div class="item-label">Curso ${num}</div>
+    <button type="button" class="remove-btn" onclick="removeCourse(${n})" title="Remover">✕</button>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="field col-span-2">
+        <label>Nome do curso</label>
+        <input type="text" name="cursos[${n}][nome]" required placeholder="Ex: Gestão em Sala de Aula">
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="field">
+        <label>Carga horária (h)</label>
+        <input type="number" name="cursos[${n}][horas]" min="1" required placeholder="20">
+      </div>
+      <div class="field">
+        <label>Data de início</label>
+        <input type="date" name="cursos[${n}][inicio]" required>
+      </div>
+      <div class="field">
+        <label>Data de término</label>
+        <input type="date" name="cursos[${n}][fim]">
+      </div>
+    </div>
+  `;
+  list.appendChild(div);
+}
+
+function removeCourse(n) {
+  const el = document.getElementById(`course-${n}`);
+  if (!el) return;
+  el.style.transition = 'opacity .18s, transform .18s';
+  el.style.opacity = '0'; el.style.transform = 'scale(.97)';
+  setTimeout(() => { el.remove(); renumber(); }, 200);
+}
+
+function renumber() {
+  document.querySelectorAll('.course-item .item-label').forEach((lbl, i) => lbl.textContent = `Curso ${i + 1}`);
+}
+
+document.getElementById('cert-form').addEventListener('submit', () => {
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading');
+  setTimeout(() => btn.classList.remove('loading'), 10000);
+});
+
+setMode('single');
+</script>
+</body>
+</html>
