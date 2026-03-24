@@ -12,7 +12,6 @@
 
     :root {
       --gold:       #B8973A;
-      --gold-light: #D4AF5A;
       --navy:       #0D1F3C;
       --navy-mid:   #1A3260;
       --cream:      #FAF8F3;
@@ -22,8 +21,6 @@
       --border:     #DDD8CC;
       --radius:     14px;
     }
-
-    html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Jost', sans-serif;
@@ -38,139 +35,99 @@
         radial-gradient(ellipse 60% 40% at 90% 100%, rgba(13,31,60,.06) 0%, transparent 60%);
     }
 
-    /* Header */
     .page-header { text-align: center; margin-bottom: 40px; }
     .seal {
       width: 68px; height: 68px;
-      border: 2px solid var(--gold);
-      border-radius: 50%;
+      border: 2px solid var(--gold); border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px;
-      background: var(--navy);
+      margin: 0 auto 18px; background: var(--navy);
       box-shadow: 0 0 0 6px rgba(184,151,58,.15), 0 4px 20px rgba(13,31,60,.2);
     }
     .page-header h1 {
       font-family: 'Cormorant Garamond', serif;
       font-size: clamp(1.8rem, 4vw, 2.6rem);
-      font-weight: 600;
-      color: var(--navy);
-      letter-spacing: .02em;
+      font-weight: 600; color: var(--navy); letter-spacing: .02em;
     }
     .page-header p {
-      font-size: .8rem;
-      color: var(--text-muted);
-      font-weight: 300;
-      margin-top: 6px;
-      letter-spacing: .1em;
-      text-transform: uppercase;
+      font-size: .8rem; color: var(--text-muted); font-weight: 300;
+      margin-top: 6px; letter-spacing: .1em; text-transform: uppercase;
     }
 
-    /* Card */
     .card {
-      background: #fff;
-      border-radius: var(--radius);
+      background: #fff; border-radius: var(--radius);
       box-shadow: 0 8px 40px rgba(13,31,60,.12), 0 2px 8px rgba(13,31,60,.06);
-      width: 100%;
-      max-width: 780px;
-      overflow: hidden;
+      width: 100%; max-width: 780px;
     }
     .card-inner { padding: 40px 44px; }
 
-    /* Mode toggle */
     .mode-toggle {
-      display: flex;
-      background: var(--cream-dark);
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 36px;
-      gap: 4px;
+      display: flex; background: var(--cream-dark);
+      border-radius: 10px; padding: 4px; margin-bottom: 36px; gap: 4px;
     }
     .mode-btn {
-      flex: 1; padding: 10px 16px;
-      border: none; background: transparent; cursor: pointer;
-      border-radius: 7px;
-      font-family: 'Jost', sans-serif;
-      font-size: .8rem; font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: .07em; text-transform: uppercase;
-      transition: all .25s;
+      flex: 1; padding: 10px 16px; border: none; background: transparent;
+      cursor: pointer; border-radius: 7px; font-family: 'Jost', sans-serif;
+      font-size: .8rem; font-weight: 500; color: var(--text-muted);
+      letter-spacing: .07em; text-transform: uppercase; transition: all .25s;
     }
-    .mode-btn.active {
-      background: var(--navy); color: #fff;
-      box-shadow: 0 2px 8px rgba(13,31,60,.25);
-    }
+    .mode-btn.active { background: var(--navy); color: #fff; box-shadow: 0 2px 8px rgba(13,31,60,.25); }
 
-    /* Section */
     .section { margin-bottom: 28px; }
     .section-title {
-      font-size: .68rem; font-weight: 600;
-      letter-spacing: .15em; text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 16px;
-      display: flex; align-items: center; gap: 10px;
+      font-size: .68rem; font-weight: 600; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
     }
-    .section-title::after {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(to right, var(--border), transparent);
-    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
 
-    /* Grid */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
     .col-span-2 { grid-column: span 2; }
-    .col-span-3 { grid-column: span 3; }
 
     @media (max-width: 560px) {
       .card-inner { padding: 28px 20px; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .col-span-2, .col-span-3 { grid-column: auto; }
+      .col-span-2 { grid-column: auto; }
     }
 
-    /* Fields */
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label {
-      font-size: .73rem; font-weight: 500;
-      color: var(--text-muted);
+      font-size: .73rem; font-weight: 500; color: var(--text-muted);
       letter-spacing: .06em; text-transform: uppercase;
     }
-    .field input, .field select {
+    .field input {
       width: 100%; padding: 11px 14px;
       border: 1.5px solid var(--border); border-radius: 8px;
       font-family: 'Jost', sans-serif; font-size: .9rem; color: var(--text);
       background: var(--cream); outline: none;
       transition: border-color .2s, box-shadow .2s;
-      -webkit-appearance: none;
     }
-    .field input:focus, .field select:focus {
+    .field input:focus {
       border-color: var(--navy-mid);
       box-shadow: 0 0 0 3px rgba(26,50,96,.1);
       background: #fff;
     }
 
     /* Multi-course */
-    #multi-mode { display: none; }
     .course-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 12px; }
     .course-item {
       border: 1.5px solid var(--border); border-radius: 10px;
-      padding: 18px; background: var(--cream);
-      position: relative;
-      animation: slideIn .25s ease;
+      padding: 20px 20px 16px; background: var(--cream);
+      position: relative; animation: slideIn .22s ease;
     }
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     .remove-btn {
-      position: absolute; top: 12px; right: 12px;
+      position: absolute; top: 14px; right: 14px;
       background: none; border: none; cursor: pointer;
-      color: #ccc; font-size: 1rem; line-height: 1;
-      transition: color .2s; padding: 2px 6px;
+      color: #ccc; font-size: .95rem; transition: color .2s; padding: 2px 6px;
     }
     .remove-btn:hover { color: #c0392b; }
     .item-label {
-      font-size: .68rem; font-weight: 600;
-      letter-spacing: .12em; text-transform: uppercase;
-      color: var(--gold); margin-bottom: 14px;
+      font-size: .67rem; font-weight: 600; letter-spacing: .13em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
     }
     .add-course-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -183,29 +140,18 @@
     }
     .add-course-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(184,151,58,.04); }
 
-    /* Submit */
     .submit-wrap { margin-top: 36px; }
     .submit-btn {
-      width: 100%; padding: 16px;
-      background: var(--navy); color: #fff;
+      width: 100%; padding: 16px; background: var(--navy); color: #fff;
       border: none; border-radius: 10px;
       font-family: 'Jost', sans-serif; font-size: .88rem; font-weight: 600;
-      letter-spacing: .1em; text-transform: uppercase;
-      cursor: pointer;
+      letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 10px;
-      transition: all .25s;
-      box-shadow: 0 4px 16px rgba(13,31,60,.25);
-      position: relative; overflow: hidden;
-    }
-    .submit-btn::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.06));
-      pointer-events: none;
+      transition: all .25s; box-shadow: 0 4px 16px rgba(13,31,60,.25);
     }
     .submit-btn:hover { background: var(--navy-mid); box-shadow: 0 6px 24px rgba(13,31,60,.35); transform: translateY(-1px); }
     .submit-btn:active { transform: translateY(0); }
     .submit-btn.loading { pointer-events: none; opacity: .75; }
-
     .spinner {
       width: 16px; height: 16px;
       border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
@@ -238,32 +184,30 @@
   <div class="card">
     <div class="card-inner">
 
-      <div class="mode-toggle" role="tablist">
-        <button class="mode-btn active" onclick="setMode('single')" id="btn-single">Curso único</button>
-        <button class="mode-btn" onclick="setMode('multi')" id="btn-multi">Múltiplos cursos</button>
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" onclick="setMode('single')" id="btn-single">Curso único</button>
+        <button type="button" class="mode-btn" onclick="setMode('multi')" id="btn-multi">Múltiplos cursos</button>
       </div>
 
-      <form id="cert-form" action="/gerar-certificado" method="POST">
+      <form id="cert-form" action="/gerar-certificado" method="POST" novalidate>
         <input type="hidden" name="modo" id="modo-hidden" value="single">
 
-        <!-- Participante -->
+        <!-- Participante — comum aos dois modos -->
         <div class="section">
           <div class="section-title">Participante</div>
           <div class="field">
             <label for="aluno">Nome completo do aluno</label>
-            <input type="text" id="aluno" name="aluno" required placeholder="Ex: Maria Fernanda Souza">
+            <input type="text" id="aluno" name="aluno" placeholder="Ex: Maria Fernanda Souza">
           </div>
         </div>
 
-        <!-- MODO ÚNICO -->
+        <!-- ══ MODO ÚNICO ══ -->
         <div id="single-mode">
           <div class="section">
             <div class="section-title">Curso / Treinamento</div>
-            <div class="grid-2" style="margin-bottom:14px">
-              <div class="field col-span-2">
-                <label for="curso">Nome do curso</label>
-                <input type="text" id="curso" name="curso" placeholder="Ex: Primeiros Socorros — Lei Lucas">
-              </div>
+            <div class="field" style="margin-bottom:14px">
+              <label for="curso">Nome do curso</label>
+              <input type="text" id="curso" name="curso" placeholder="Ex: Primeiros Socorros — Lei Lucas">
             </div>
             <div class="grid-3">
               <div class="field">
@@ -296,22 +240,8 @@
           </div>
         </div>
 
-        <!-- MODO MÚLTIPLO -->
-        <div id="multi-mode">
-          <div class="section">
-            <div class="section-title">Dados gerais</div>
-            <div class="grid-2">
-              <div class="field">
-                <label for="m-palestrante">Instrutor / Palestrante</label>
-                <input type="text" id="m-palestrante" name="m_palestrante" placeholder="Prof. João da Silva">
-              </div>
-              <div class="field">
-                <label for="m-local">Local de realização</label>
-                <input type="text" id="m-local" name="m_local" placeholder="Vacaria, RS">
-              </div>
-            </div>
-          </div>
-
+        <!-- ══ MODO MÚLTIPLO ══ -->
+        <div id="multi-mode" style="display:none">
           <div class="section">
             <div class="section-title">Cursos realizados</div>
             <div class="course-list" id="course-list"></div>
@@ -322,13 +252,13 @@
         </div>
 
         <div class="submit-wrap">
-          <button type="submit" class="submit-btn" id="submit-btn">
+          <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
             <span class="spinner"></span>
             <span class="btn-label">📜 &nbsp;Gerar &amp; baixar certificado</span>
           </button>
         </div>
-      </form>
 
+      </form>
     </div>
   </div>
 
@@ -338,20 +268,15 @@
 
 <script>
 let courseCount = 0;
+let currentMode = 'single';
 
 function setMode(mode) {
+  currentMode = mode;
   document.getElementById('modo-hidden').value = mode;
   document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
   document.getElementById('multi-mode').style.display  = mode === 'multi'  ? '' : 'none';
   document.getElementById('btn-single').classList.toggle('active', mode === 'single');
   document.getElementById('btn-multi').classList.toggle('active',  mode === 'multi');
-
-  const singles = ['curso','horas','data_inicio','palestrante','local'];
-  singles.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.required = (mode === 'single');
-  });
-
   if (mode === 'multi' && document.querySelectorAll('.course-item').length === 0) addCourse();
 }
 
@@ -359,27 +284,29 @@ function addCourse() {
   courseCount++;
   const n = courseCount;
   const list = document.getElementById('course-list');
-  const num = list.children.length + 1;
-  const div = document.createElement('div');
+  const num  = list.children.length + 1;
+  const div  = document.createElement('div');
   div.className = 'course-item';
   div.id = `course-${n}`;
   div.innerHTML = `
     <div class="item-label">Curso ${num}</div>
     <button type="button" class="remove-btn" onclick="removeCourse(${n})" title="Remover">✕</button>
-    <div class="grid-2" style="margin-bottom:12px">
-      <div class="field col-span-2">
-        <label>Nome do curso</label>
-        <input type="text" name="cursos[${n}][nome]" required placeholder="Ex: Gestão em Sala de Aula">
-      </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Nome do curso</label>
+      <input type="text" name="cursos[${n}][nome]" placeholder="Ex: Gestão em Sala de Aula">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Instrutor / Palestrante</label>
+      <input type="text" name="cursos[${n}][instrutor]" placeholder="Prof. João da Silva">
     </div>
     <div class="grid-3">
       <div class="field">
         <label>Carga horária (h)</label>
-        <input type="number" name="cursos[${n}][horas]" min="1" required placeholder="20">
+        <input type="number" name="cursos[${n}][horas]" min="1" placeholder="20">
       </div>
       <div class="field">
         <label>Data de início</label>
-        <input type="date" name="cursos[${n}][inicio]" required>
+        <input type="date" name="cursos[${n}][inicio]">
       </div>
       <div class="field">
         <label>Data de término</label>
@@ -394,19 +321,50 @@ function removeCourse(n) {
   const el = document.getElementById(`course-${n}`);
   if (!el) return;
   el.style.transition = 'opacity .18s, transform .18s';
-  el.style.opacity = '0'; el.style.transform = 'scale(.97)';
+  el.style.opacity = '0';
+  el.style.transform = 'scale(.97)';
   setTimeout(() => { el.remove(); renumber(); }, 200);
 }
 
 function renumber() {
-  document.querySelectorAll('.course-item .item-label').forEach((lbl, i) => lbl.textContent = `Curso ${i + 1}`);
+  document.querySelectorAll('.course-item .item-label').forEach((lbl, i) => {
+    lbl.textContent = `Curso ${i + 1}`;
+  });
 }
 
-document.getElementById('cert-form').addEventListener('submit', () => {
+function submitForm() {
+  const aluno = document.getElementById('aluno').value.trim();
+  if (!aluno) { alert('Por favor, informe o nome do aluno.'); return; }
+
+  if (currentMode === 'single') {
+    const curso = document.getElementById('curso').value.trim();
+    const horas = document.getElementById('horas').value.trim();
+    const inicio = document.getElementById('data_inicio').value;
+    const palestrante = document.getElementById('palestrante').value.trim();
+    const local = document.getElementById('local').value.trim();
+    if (!curso)       { alert('Por favor, informe o nome do curso.'); return; }
+    if (!horas)       { alert('Por favor, informe a carga horária.'); return; }
+    if (!inicio)      { alert('Por favor, informe a data de início.'); return; }
+    if (!palestrante) { alert('Por favor, informe o nome do instrutor.'); return; }
+    if (!local)       { alert('Por favor, informe o local de realização.'); return; }
+  } else {
+    const items = document.querySelectorAll('.course-item');
+    if (items.length === 0) { alert('Adicione ao menos um curso.'); return; }
+    for (let i = 0; i < items.length; i++) {
+      const nome  = items[i].querySelector('input[name$="[nome]"]').value.trim();
+      const horas = items[i].querySelector('input[name$="[horas]"]').value.trim();
+      const ini   = items[i].querySelector('input[name$="[inicio]"]').value;
+      if (!nome)  { alert(`Informe o nome do Curso ${i+1}.`); return; }
+      if (!horas) { alert(`Informe a carga horária do Curso ${i+1}.`); return; }
+      if (!ini)   { alert(`Informe a data de início do Curso ${i+1}.`); return; }
+    }
+  }
+
   const btn = document.getElementById('submit-btn');
   btn.classList.add('loading');
-  setTimeout(() => btn.classList.remove('loading'), 10000);
-});
+  setTimeout(() => btn.classList.remove('loading'), 12000);
+  document.getElementById('cert-form').submit();
+}
 
 setMode('single');
 </script>
