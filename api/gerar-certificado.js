@@ -84,7 +84,7 @@ function linha(page, x1, y1, x2, y2, cor, thickness = 0.6) {
 async function carregarFontes(pdfDoc) {
   pdfDoc.registerFontkit(fontkit);
 
-  const dir = path.join(process.cwd(), 'fonts');
+  const dir = process.cwd();
 
   const ler = (nome) => {
     try   { return fs.readFileSync(path.join(dir, nome)); }
