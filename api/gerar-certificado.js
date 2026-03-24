@@ -322,9 +322,7 @@ async function gerarAnual(d) {
   pgV.drawRectangle({ x: TABLE_X, y: yV - ROW_H + 4, width: TABLE_W, height: ROW_H, color: COR.verde });
 
   for (const col of COLS) {
-    const tw = f.sansBold.widthOfTextAtSize(col.label, 7
-
-    const tw = f.sansBold.widthOfTextAtSize(col.label, 7);
+        const tw = f.sansBold.widthOfTextAtSize(col.label, 7);
     let hx = col.x;
     if (col.align === 'center') hx = col.x + (col.w - tw) / 2;
 
