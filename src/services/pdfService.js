@@ -1,4 +1,4 @@
-const { PDFDocument, PDFImage } = require('pdf-lib');
+const { PDFDocument } = require('pdf-lib');
 const { COR, W, H } = require('../config/constants');
 const { carregarFontes } = require('./fontService');
 const {
@@ -34,16 +34,16 @@ async function gerarIndividual(d) {
   try {
     qrCodeDataUrl = await gerarQRCode(urlVerificacao);
   } catch (err) {
-    console.warn('[pdfService] Não foi possível gerar QR Code:', err.message);
+    console.warn('[pdfService] Nao foi possivel gerar QR Code:', err.message);
   }
 
   const page = pdfDoc.addPage([W, H]);
   page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
 
   desenharBorda(page);
-  desenharMarcaDagua(page, f);
-
-  const yPosC = desenharCabecalho(page, f);
+  // FIX: await + pdfDoc passado como argumento (funcoes viraram async)
+  await desenharMarcaDagua(page, f, pdfDoc);
+  const yPosC = await desenharCabecalho(page, f, pdfDoc);
   const yPosT = desenharTitulo(page, f, yPosC);
 
   let y = yPosT - 16;
@@ -55,7 +55,7 @@ async function gerarIndividual(d) {
   y -= 18;
 
   if (d.cargo) {
-    const cargoStr = `${d.cargo}${d.matricula ? '  —  Matrícula: ' + d.matricula : ''}`;
+    const cargoStr = `${d.cargo}${d.matricula ? '  —  Matricula: ' + d.matricula : ''}`;
     centro(page, cargoStr, f.sans, 9, y, COR.cinza);
     y -= 16;
   }
@@ -69,16 +69,16 @@ async function gerarIndividual(d) {
   linha(page, W / 2 - 110, y, W / 2 + 110, y, COR.cinzaC, 0.5);
   y -= 14;
 
-  // Detalhes em linha única
+  // FIX: campo correto é d.cargaHoraria (não d.horas)
   const dets = [
-    d.horas      ? `Carga Horária: ${d.horas} horas` : null,
-    d.periodo    ? `Período: ${d.periodo}`            : null,
-    d.modalidade ? `Modalidade: ${d.modalidade}`      : null,
-    d.local      ? `Local: ${d.local}`                : null,
+    d.cargaHoraria ? `Carga Horaria: ${d.cargaHoraria} horas` : null,
+    d.periodo      ? `Periodo: ${d.periodo}`                  : null,
+    d.modalidade   ? `Modalidade: ${d.modalidade}`            : null,
+    d.local        ? `Local: ${d.local}`                      : null,
   ].filter(Boolean);
 
   if (dets.length > 0) {
-    centro(page, dets.join('   ·   '), f.sans, 8.5, y, COR.cinza);
+    centro(page, dets.join('   -   '), f.sans, 8.5, y, COR.cinza);
     y -= 14;
   }
 
@@ -89,9 +89,8 @@ async function gerarIndividual(d) {
 
   desenharRodape(page, f, d.prefeito, d.secretario, d.dataEmissao);
 
-  // ── ADICIONA CÓDIGO DE VERIFICAÇÃO NO RODAPÉ ───────────────────
-  // Código no canto inferior esquerdo
-  page.drawText(`Código: ${codigoVerificacao}`, {
+  // Código de verificação no rodapé
+  page.drawText(`Codigo: ${codigoVerificacao}`, {
     x: 30,
     y: 18,
     font: f.sans,
@@ -102,7 +101,6 @@ async function gerarIndividual(d) {
   // QR Code no canto inferior direito
   if (qrCodeDataUrl) {
     try {
-      // Remove "data:image/png;base64," prefix
       const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
       const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
       const qrSize = 50;
@@ -114,7 +112,6 @@ async function gerarIndividual(d) {
       });
     } catch (err) {
       console.warn('[pdfService] Erro ao adicionar QR Code ao PDF:', err.message);
-      // Fallback: adiciona placeholder de texto
       page.drawText('[QR Code]', {
         x: W - 70,
         y: 18,
@@ -144,7 +141,7 @@ async function gerarAnual(d) {
   try {
     qrCodeDataUrl = await gerarQRCode(urlVerificacao);
   } catch (err) {
-    console.warn('[pdfService] Não foi possível gerar QR Code:', err.message);
+    console.warn('[pdfService] Nao foi possivel gerar QR Code:', err.message);
   }
 
   const totalHoras = (d.cursos || []).reduce((s, c) => s + (parseInt(c.horas) || 0), 0);
@@ -153,9 +150,9 @@ async function gerarAnual(d) {
   const pgF = pdfDoc.addPage([W, H]);
   pgF.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
   desenharBorda(pgF);
-  desenharMarcaDagua(pgF, f);
-
-  const yCF = desenharCabecalho(pgF, f);
+  // FIX: await + pdfDoc passado como argumento
+  await desenharMarcaDagua(pgF, f, pdfDoc);
+  const yCF = await desenharCabecalho(pgF, f, pdfDoc);
   const yTF = desenharTitulo(pgF, f, yCF);
 
   let y = yTF - 16;
@@ -167,24 +164,23 @@ async function gerarAnual(d) {
   y -= 18;
 
   if (d.cargo) {
-    const cargoStr = `${d.cargo}${d.matricula ? '  —  Matrícula: ' + d.matricula : ''}`;
+    const cargoStr = `${d.cargo}${d.matricula ? '  —  Matricula: ' + d.matricula : ''}`;
     centro(pgF, cargoStr, f.sans, 9, y, COR.cinza);
     y -= 16;
   }
 
-  centro(pgF, 'concluiu com aproveitamento as capacitações e formações continuadas', f.regular, 11, y, COR.preto);
+  centro(pgF, 'concluiu com aproveitamento as capacitacoes e formacoes continuadas', f.regular, 11, y, COR.preto);
   y -= 16;
-  centro(pgF, `promovidas pela Secretaria Municipal de Educação no ${d.periodoTexto},`, f.regular, 11, y, COR.preto);
+  centro(pgF, `promovidas pela Secretaria Municipal de Educacao no ${d.periodoTexto},`, f.regular, 11, y, COR.preto);
   y -= 16;
-  centro(pgF, 'totalizando uma carga horária de:', f.regular, 11, y, COR.preto);
+  centro(pgF, 'totalizando uma carga horaria de:', f.regular, 11, y, COR.preto);
   y -= 32;
 
-  // Total de horas em destaque
   const horasStr = `${totalHoras} horas`;
   centro(pgF, horasStr, f.bold, 28, y, COR.verde);
   y -= 20;
 
-  centro(pgF, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 8.5, y, COR.cinza);
+  centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 8.5, y, COR.cinza);
 
   desenharRodape(pgF, f, d.prefeito, d.secretario, d.dataEmissao);
 
@@ -195,23 +191,22 @@ async function gerarAnual(d) {
 
   let yV = H - 48;
 
-  centro(pgV, 'RELAÇÃO DE CURSOS REALIZADOS', f.sansBold, 10, yV, COR.verde);
+  centro(pgV, 'RELACAO DE CURSOS REALIZADOS', f.sansBold, 10, yV, COR.verde);
   yV -= 14;
 
-  const subtitulo = `${d.nome}${d.cargo ? '  —  ' + d.cargo : ''}   ·   ${d.periodoTexto}`;
+  const subtitulo = `${d.nome}${d.cargo ? '  —  ' + d.cargo : ''}   -   ${d.periodoTexto}`;
   centro(pgV, subtitulo, f.sans, 8, yV, COR.cinza);
   yV -= 8;
   linha(pgV, 50, yV, W - 50, yV, COR.dourado, 0.7);
   yV -= 4;
 
-  // Definição das colunas
   const COLS = [
-    { label: '#',             x:  52, w:  22, align: 'center' },
+    { label: '#',                   x:  52, w:  22, align: 'center' },
     { label: 'CURSO / TREINAMENTO', x:  78, w: 315, align: 'left'   },
-    { label: 'C.H.',          x: 397, w:  44, align: 'center' },
-    { label: 'PERÍODO',       x: 445, w: 110, align: 'center' },
-    { label: 'MODALIDADE',    x: 559, w:  78, align: 'center' },
-    { label: 'LOCAL / INSTITUIÇÃO', x: 641, w: 152, align: 'left'   },
+    { label: 'C.H.',                x: 397, w:  44, align: 'center' },
+    { label: 'PERIODO',             x: 445, w: 110, align: 'center' },
+    { label: 'MODALIDADE',          x: 559, w:  78, align: 'center' },
+    { label: 'LOCAL / INSTITUICAO', x: 641, w: 152, align: 'left'   },
   ];
 
   const ROW_H = 17;
@@ -225,7 +220,6 @@ async function gerarAnual(d) {
     const tw = f.sansBold.widthOfTextAtSize(col.label, 7);
     let hx = col.x;
     if (col.align === 'center') hx = col.x + (col.w - tw) / 2;
-
     pgV.drawText(col.label, {
       x: hx, y: yV - ROW_H + 9,
       font: f.sansBold, size: 7, color: COR.branco,
@@ -233,7 +227,6 @@ async function gerarAnual(d) {
   }
   yV -= ROW_H;
 
-  // Linhas dos cursos
   const cursos = d.cursos || [];
   for (let i = 0; i < cursos.length; i++) {
     const c = cursos[i];
@@ -247,18 +240,18 @@ async function gerarAnual(d) {
 
     const periodo = c.inicio && c.fim
       ? `${fmtCurta(c.inicio)} a ${fmtCurta(c.fim)}`
-      : c.inicio ? fmtCurta(c.inicio) : '—';
+      : c.inicio ? fmtCurta(c.inicio) : '-';
 
-    const nomeTrunc = truncar(c.nome || '—', f.sans, 8, COLS[1].w - 4);
-    const localTrunc = truncar(c.local || '—', f.sans, 8, COLS[5].w - 4);
+    const nomeTrunc  = truncar(c.nome  || '-', f.sans, 8, COLS[1].w - 4);
+    const localTrunc = truncar(c.local || '-', f.sans, 8, COLS[5].w - 4);
 
     const celulas = [
-      { col: COLS[0], text: String(i + 1),       font: f.sansBold, size: 8 },
-      { col: COLS[1], text: nomeTrunc,            font: f.sans,     size: 8 },
-      { col: COLS[2], text: c.horas ? `${c.horas}h` : '—', font: f.sansBold, size: 8 },
-      { col: COLS[3], text: periodo,              font: f.sans,     size: 7.5 },
-      { col: COLS[4], text: c.modalidade || '—', font: f.sans,     size: 7.5 },
-      { col: COLS[5], text: localTrunc,           font: f.sans,     size: 7.5 },
+      { col: COLS[0], text: String(i + 1),                          font: f.sansBold, size: 8   },
+      { col: COLS[1], text: nomeTrunc,                              font: f.sans,     size: 8   },
+      { col: COLS[2], text: c.horas ? `${c.horas}h` : '-',         font: f.sansBold, size: 8   },
+      { col: COLS[3], text: periodo,                                font: f.sans,     size: 7.5 },
+      { col: COLS[4], text: c.modalidade || '-',                    font: f.sans,     size: 7.5 },
+      { col: COLS[5], text: localTrunc,                             font: f.sans,     size: 7.5 },
     ];
 
     for (const cel of celulas) {
@@ -271,7 +264,6 @@ async function gerarAnual(d) {
       });
     }
 
-    // Linha separadora
     linha(pgV, TABLE_X, yV - ROW_H + 4, TABLE_X + TABLE_W, yV - ROW_H + 4, COR.cinzaC, 0.3);
     yV -= ROW_H;
   }
@@ -285,7 +277,7 @@ async function gerarAnual(d) {
     borderWidth: 0.5,
   });
 
-  const totalLabel = 'Total de Horas de Formação:';
+  const totalLabel = 'Total de Horas de Formacao:';
   pgV.drawText(totalLabel, {
     x: COLS[1].x, y: yV - ROW_H + 7,
     font: f.sansBold, size: 8, color: COR.verde,
@@ -306,9 +298,8 @@ async function gerarAnual(d) {
   centroBloco(pgV, d.secretario, f.sansBold, 8, yV - 10, assX, 200, COR.preto);
   centroBloco(pgV, 'Secretário(a) Municipal de Educação', f.sans, 7.5, yV - 20, assX, 200, COR.cinza);
 
-  // ── ADICIONA CÓDIGO DE VERIFICAÇÃO E QR CODE NO VERSO ──────────
-  // Código no canto inferior esquerdo do verso
-  pgV.drawText(`Código: ${codigoVerificacao}`, {
+  // Código de verificação no verso
+  pgV.drawText(`Codigo: ${codigoVerificacao}`, {
     x: 30,
     y: 18,
     font: f.sans,
@@ -319,7 +310,6 @@ async function gerarAnual(d) {
   // QR Code no canto inferior direito do verso
   if (qrCodeDataUrl) {
     try {
-      // Remove "data:image/png;base64," prefix
       const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
       const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
       const qrSize = 50;
@@ -331,7 +321,6 @@ async function gerarAnual(d) {
       });
     } catch (err) {
       console.warn('[pdfService] Erro ao adicionar QR Code ao verso:', err.message);
-      // Fallback: adiciona placeholder de texto
       pgV.drawText('[QR Code]', {
         x: W - 70,
         y: 18,
