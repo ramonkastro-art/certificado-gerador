@@ -1,4 +1,6 @@
 const { PDFDocument } = require('pdf-lib');
+const path = require('path');
+const fs = require('fs');
 const { COR, W, H } = require('../config/constants');
 const { carregarFontes } = require('./fontService');
 const {
@@ -15,6 +17,26 @@ const { gerarCodigoVerificacao, gerarURLVerificacao } = require('../utils/verifi
 const { gerarQRCode } = require('../utils/qrCodeGenerator');
 
 // ══════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Carrega o background PNG e aplica na página.
+ * Se o arquivo não existir, usa cor sólida como fallback.
+ */
+async function aplicarBackground(page, pdfDoc) {
+  try {
+    const bgPath = path.join(process.cwd(), 'assets', 'background.png');
+    const bgBytes = fs.readFileSync(bgPath);
+    const bgImage = await pdfDoc.embedPng(bgBytes);
+    page.drawImage(bgImage, { x: 0, y: 0, width: W, height: H });
+  } catch (err) {
+    console.warn('[pdfService] Background ignorado, usando cor solida:', err.message);
+    page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  SERVIÇO DE GERAÇÃO PDF
 // ══════════════════════════════════════════════════════════════
 
@@ -25,11 +47,9 @@ async function gerarIndividual(d) {
   const pdfDoc = await PDFDocument.create();
   const f = await carregarFontes(pdfDoc);
 
-  // Gera código de verificação e URL
   const codigoVerificacao = gerarCodigoVerificacao(d);
   const urlVerificacao = gerarURLVerificacao(codigoVerificacao);
 
-  // Gera QR Code como Data URL
   let qrCodeDataUrl = null;
   try {
     qrCodeDataUrl = await gerarQRCode(urlVerificacao);
@@ -38,10 +58,11 @@ async function gerarIndividual(d) {
   }
 
   const page = pdfDoc.addPage([W, H]);
-  page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
+
+  // Background da página
+  await aplicarBackground(page, pdfDoc);
 
   desenharBorda(page);
-  // FIX: await + pdfDoc passado como argumento (funcoes viraram async)
   await desenharMarcaDagua(page, f, pdfDoc);
   const yPosC = await desenharCabecalho(page, f, pdfDoc);
   const yPosT = desenharTitulo(page, f, yPosC);
@@ -69,7 +90,6 @@ async function gerarIndividual(d) {
   linha(page, W / 2 - 110, y, W / 2 + 110, y, COR.cinzaC, 0.5);
   y -= 14;
 
-  // FIX: campo correto é d.cargaHoraria (não d.horas)
   const dets = [
     d.cargaHoraria ? `Carga Horaria: ${d.cargaHoraria} horas` : null,
     d.periodo      ? `Periodo: ${d.periodo}`                  : null,
@@ -89,36 +109,20 @@ async function gerarIndividual(d) {
 
   desenharRodape(page, f, d.prefeito, d.secretario, d.dataEmissao);
 
-  // Código de verificação no rodapé
   page.drawText(`Codigo: ${codigoVerificacao}`, {
-    x: 30,
-    y: 18,
-    font: f.sans,
-    size: 7,
-    color: COR.cinza,
+    x: 30, y: 18,
+    font: f.sans, size: 7, color: COR.cinza,
   });
 
-  // QR Code no canto inferior direito
   if (qrCodeDataUrl) {
     try {
       const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
       const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
       const qrSize = 50;
-      page.drawImage(qrImage, {
-        x: W - qrSize - 20,
-        y: 15,
-        width: qrSize,
-        height: qrSize,
-      });
+      page.drawImage(qrImage, { x: W - qrSize - 20, y: 15, width: qrSize, height: qrSize });
     } catch (err) {
       console.warn('[pdfService] Erro ao adicionar QR Code ao PDF:', err.message);
-      page.drawText('[QR Code]', {
-        x: W - 70,
-        y: 18,
-        font: f.sans,
-        size: 7,
-        color: COR.cinza,
-      });
+      page.drawText('[QR Code]', { x: W - 70, y: 18, font: f.sans, size: 7, color: COR.cinza });
     }
   }
 
@@ -132,11 +136,9 @@ async function gerarAnual(d) {
   const pdfDoc = await PDFDocument.create();
   const f = await carregarFontes(pdfDoc);
 
-  // Gera código de verificação e URL
   const codigoVerificacao = gerarCodigoVerificacao(d);
   const urlVerificacao = gerarURLVerificacao(codigoVerificacao);
 
-  // Gera QR Code como Data URL
   let qrCodeDataUrl = null;
   try {
     qrCodeDataUrl = await gerarQRCode(urlVerificacao);
@@ -148,9 +150,8 @@ async function gerarAnual(d) {
 
   // ── FRENTE ────────────────────────────────────────────────
   const pgF = pdfDoc.addPage([W, H]);
-  pgF.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
+  await aplicarBackground(pgF, pdfDoc);
   desenharBorda(pgF);
-  // FIX: await + pdfDoc passado como argumento
   await desenharMarcaDagua(pgF, f, pdfDoc);
   const yCF = await desenharCabecalho(pgF, f, pdfDoc);
   const yTF = desenharTitulo(pgF, f, yCF);
@@ -176,8 +177,7 @@ async function gerarAnual(d) {
   centro(pgF, 'totalizando uma carga horaria de:', f.regular, 11, y, COR.preto);
   y -= 32;
 
-  const horasStr = `${totalHoras} horas`;
-  centro(pgF, horasStr, f.bold, 28, y, COR.verde);
+  centro(pgF, `${totalHoras} horas`, f.bold, 28, y, COR.verde);
   y -= 20;
 
   centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 8.5, y, COR.cinza);
@@ -186,7 +186,7 @@ async function gerarAnual(d) {
 
   // ── VERSO ─────────────────────────────────────────────────
   const pgV = pdfDoc.addPage([W, H]);
-  pgV.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
+  await aplicarBackground(pgV, pdfDoc);
   desenharBorda(pgV);
 
   let yV = H - 48;
@@ -209,11 +209,10 @@ async function gerarAnual(d) {
     { label: 'LOCAL / INSTITUICAO', x: 641, w: 152, align: 'left'   },
   ];
 
-  const ROW_H = 17;
+  const ROW_H   = 17;
   const TABLE_X = 50;
   const TABLE_W = W - 100;
 
-  // Header da tabela
   pgV.drawRectangle({ x: TABLE_X, y: yV - ROW_H + 4, width: TABLE_W, height: ROW_H, color: COR.verde });
 
   for (const col of COLS) {
@@ -229,29 +228,24 @@ async function gerarAnual(d) {
 
   const cursos = d.cursos || [];
   for (let i = 0; i < cursos.length; i++) {
-    const c = cursos[i];
+    const c  = cursos[i];
     const bg = i % 2 === 0 ? COR.branco : COR.verdeBg;
 
-    pgV.drawRectangle({
-      x: TABLE_X, y: yV - ROW_H + 4,
-      width: TABLE_W, height: ROW_H,
-      color: bg,
-    });
+    pgV.drawRectangle({ x: TABLE_X, y: yV - ROW_H + 4, width: TABLE_W, height: ROW_H, color: bg });
 
-    const periodo = c.inicio && c.fim
+    const periodo    = c.inicio && c.fim
       ? `${fmtCurta(c.inicio)} a ${fmtCurta(c.fim)}`
       : c.inicio ? fmtCurta(c.inicio) : '-';
-
     const nomeTrunc  = truncar(c.nome  || '-', f.sans, 8, COLS[1].w - 4);
     const localTrunc = truncar(c.local || '-', f.sans, 8, COLS[5].w - 4);
 
     const celulas = [
-      { col: COLS[0], text: String(i + 1),                          font: f.sansBold, size: 8   },
-      { col: COLS[1], text: nomeTrunc,                              font: f.sans,     size: 8   },
-      { col: COLS[2], text: c.horas ? `${c.horas}h` : '-',         font: f.sansBold, size: 8   },
-      { col: COLS[3], text: periodo,                                font: f.sans,     size: 7.5 },
-      { col: COLS[4], text: c.modalidade || '-',                    font: f.sans,     size: 7.5 },
-      { col: COLS[5], text: localTrunc,                             font: f.sans,     size: 7.5 },
+      { col: COLS[0], text: String(i + 1),                  font: f.sansBold, size: 8   },
+      { col: COLS[1], text: nomeTrunc,                      font: f.sans,     size: 8   },
+      { col: COLS[2], text: c.horas ? `${c.horas}h` : '-', font: f.sansBold, size: 8   },
+      { col: COLS[3], text: periodo,                        font: f.sans,     size: 7.5 },
+      { col: COLS[4], text: c.modalidade || '-',            font: f.sans,     size: 7.5 },
+      { col: COLS[5], text: localTrunc,                     font: f.sans,     size: 7.5 },
     ];
 
     for (const cel of celulas) {
@@ -272,19 +266,16 @@ async function gerarAnual(d) {
   pgV.drawRectangle({
     x: TABLE_X, y: yV - ROW_H + 4,
     width: TABLE_W, height: ROW_H,
-    color: COR.verdeBg,
-    borderColor: COR.verde,
-    borderWidth: 0.5,
+    color: COR.verdeBg, borderColor: COR.verde, borderWidth: 0.5,
   });
 
-  const totalLabel = 'Total de Horas de Formacao:';
-  pgV.drawText(totalLabel, {
+  pgV.drawText('Total de Horas de Formacao:', {
     x: COLS[1].x, y: yV - ROW_H + 7,
     font: f.sansBold, size: 8, color: COR.verde,
   });
 
   const totalStr = `${totalHoras}h`;
-  const totalTW = f.sansBold.widthOfTextAtSize(totalStr, 9);
+  const totalTW  = f.sansBold.widthOfTextAtSize(totalStr, 9);
   pgV.drawText(totalStr, {
     x: COLS[2].x + (COLS[2].w - totalTW) / 2, y: yV - ROW_H + 7,
     font: f.sansBold, size: 9, color: COR.verde,
@@ -292,42 +283,25 @@ async function gerarAnual(d) {
 
   yV -= ROW_H + 16;
 
-  // Assinatura no verso
   const assX = W - 82 - 200;
   linha(pgV, assX, yV, assX + 200, yV, COR.preto, 0.5);
   centroBloco(pgV, d.secretario, f.sansBold, 8, yV - 10, assX, 200, COR.preto);
   centroBloco(pgV, 'Secretário(a) Municipal de Educação', f.sans, 7.5, yV - 20, assX, 200, COR.cinza);
 
-  // Código de verificação no verso
   pgV.drawText(`Codigo: ${codigoVerificacao}`, {
-    x: 30,
-    y: 18,
-    font: f.sans,
-    size: 7,
-    color: COR.cinza,
+    x: 30, y: 18,
+    font: f.sans, size: 7, color: COR.cinza,
   });
 
-  // QR Code no canto inferior direito do verso
   if (qrCodeDataUrl) {
     try {
       const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
       const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
-      const qrSize = 50;
-      pgV.drawImage(qrImage, {
-        x: W - qrSize - 20,
-        y: 15,
-        width: qrSize,
-        height: qrSize,
-      });
+      const qrSize  = 50;
+      pgV.drawImage(qrImage, { x: W - qrSize - 20, y: 15, width: qrSize, height: qrSize });
     } catch (err) {
       console.warn('[pdfService] Erro ao adicionar QR Code ao verso:', err.message);
-      pgV.drawText('[QR Code]', {
-        x: W - 70,
-        y: 18,
-        font: f.sans,
-        size: 7,
-        color: COR.cinza,
-      });
+      pgV.drawText('[QR Code]', { x: W - 70, y: 18, font: f.sans, size: 7, color: COR.cinza });
     }
   }
 
