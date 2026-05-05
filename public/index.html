@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Certificados — SMED Vacaria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #B8973A;
+      --navy:       #0D1F3C;
+      --navy-mid:   #1A3260;
+      --cream:      #FAF8F3;
+      --cream-dark: #F0EDE4;
+      --text:       #2A2A2A;
+      --text-muted: #6B6B6B;
+      --border:     #DDD8CC;
+      --radius:     14px;
+    }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(184,151,58,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 100%, rgba(13,31,60,.06) 0%, transparent 60%);
+    }
+
+    .page-header { text-align: center; margin-bottom: 40px; }
+    .seal {
+      width: 68px; height: 68px;
+      border: 2px solid var(--gold); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px; background: var(--navy);
+      box-shadow: 0 0 0 6px rgba(184,151,58,.15), 0 4px 20px rgba(13,31,60,.2);
+    }
+    .page-header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 600; color: var(--navy); letter-spacing: .02em;
+    }
+    .page-header p {
+      font-size: .8rem; color: var(--text-muted); font-weight: 300;
+      margin-top: 6px; letter-spacing: .1em; text-transform: uppercase;
+    }
+
+    .card {
+      background: #fff; border-radius: var(--radius);
+      box-shadow: 0 8px 40px rgba(13,31,60,.12), 0 2px 8px rgba(13,31,60,.06);
+      width: 100%; max-width: 780px;
+    }
+    .card-inner { padding: 40px 44px; }
+
+    .mode-toggle {
+      display: flex; background: var(--cream-dark);
+      border-radius: 10px; padding: 4px; margin-bottom: 36px; gap: 4px;
+    }
+    .mode-btn {
+      flex: 1; padding: 10px 16px; border: none; background: transparent;
+      cursor: pointer; border-radius: 7px; font-family: 'Jost', sans-serif;
+      font-size: .8rem; font-weight: 500; color: var(--text-muted);
+      letter-spacing: .07em; text-transform: uppercase; transition: all .25s;
+    }
+    .mode-btn.active { background: var(--navy); color: #fff; box-shadow: 0 2px 8px rgba(13,31,60,.25); }
+
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: .68rem; font-weight: 600; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .col-span-2 { grid-column: span 2; }
+
+    @media (max-width: 560px) {
+      .card-inner { padding: 28px 20px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .col-span-2 { grid-column: auto; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: .73rem; font-weight: 500; color: var(--text-muted);
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .field input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'Jost', sans-serif; font-size: .9rem; color: var(--text);
+      background: var(--cream); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus {
+      border-color: var(--navy-mid);
+      box-shadow: 0 0 0 3px rgba(26,50,96,.1);
+      background: #fff;
+    }
+
+    /* Multi-course */
+    .course-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 12px; }
+    .course-item {
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 20px 20px 16px; background: var(--cream);
+      position: relative; animation: slideIn .22s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .remove-btn {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; cursor: pointer;
+      color: #ccc; font-size: .95rem; transition: color .2s; padding: 2px 6px;
+    }
+    .remove-btn:hover { color: #c0392b; }
+    .item-label {
+      font-size: .67rem; font-weight: 600; letter-spacing: .13em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+    }
+    .add-course-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px;
+      border: 1.5px dashed var(--border); border-radius: 8px;
+      background: transparent; color: var(--text-muted);
+      font-family: 'Jost', sans-serif; font-size: .8rem; font-weight: 500;
+      letter-spacing: .07em; text-transform: uppercase;
+      cursor: pointer; transition: all .2s;
+    }
+    .add-course-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(184,151,58,.04); }
+
+    .submit-wrap { margin-top: 36px; }
+    .submit-btn {
+      width: 100%; padding: 16px; background: var(--navy); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Jost', sans-serif; font-size: .88rem; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: all .25s; box-shadow: 0 4px 16px rgba(13,31,60,.25);
+    }
+    .submit-btn:hover { background: var(--navy-mid); box-shadow: 0 6px 24px rgba(13,31,60,.35); transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn.loading { pointer-events: none; opacity: .75; }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin .7s linear infinite; display: none;
+    }
+    .submit-btn.loading .spinner { display: block; }
+    .submit-btn.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-note {
+      text-align: center; font-size: .73rem;
+      color: var(--text-muted); margin-top: 24px; letter-spacing: .04em;
+    }
+    .footer-note strong { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="seal">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="14" stroke="#B8973A" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <path d="M18 6L20.8 14.2H29.4L22.3 19.3L25.1 27.5L18 22.4L10.9 27.5L13.7 19.3L6.6 14.2H15.2L18 6Z" fill="#B8973A"/>
+      </svg>
+    </div>
+    <h1>Emissão de Certificado</h1>
+    <p>Secretaria Municipal de Educação · Vacaria / RS</p>
+  </header>
+
+  <div class="card">
+    <div class="card-inner">
+
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" onclick="setMode('single')" id="btn-single">Curso único</button>
+        <button type="button" class="mode-btn" onclick="setMode('multi')" id="btn-multi">Múltiplos cursos</button>
+      </div>
+
+      <form id="cert-form" novalidate>
+        <!-- Tipo de certificado: "individual" ou "anual" -->
+        <input type="hidden" name="tipo" id="tipo-hidden" value="individual">
+
+        <!-- Participante — comum aos dois modos -->
+        <div class="section">
+          <div class="section-title">Participante</div>
+          <div class="field">
+            <label for="nome">Nome completo do aluno</label>
+            <input type="text" id="nome" name="nome" placeholder="Ex: Maria Fernanda Souza" required>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="cargo">Cargo / Função (opcional)</label>
+              <input type="text" id="cargo" name="cargo" placeholder="Ex: Professor">
+            </div>
+            <div class="field">
+              <label for="matricula">Matrícula (opcional)</label>
+              <input type="text" id="matricula" name="matricula" placeholder="Ex: 2024-001">
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ MODO ÚNICO ══ -->
+        <div id="single-mode">
+          <div class="section">
+            <div class="section-title">Curso / Treinamento</div>
+            <div class="field" style="margin-bottom:14px">
+              <label for="curso">Nome do curso</label>
+              <input type="text" id="curso" name="curso" placeholder="Ex: Primeiros Socorros — Lei Lucas" required>
+            </div>
+            <div class="grid-3">
+              <div class="field">
+                <label for="horas">Carga horária (h)</label>
+                <input type="number" id="horas" name="horas" min="1" placeholder="40" required>
+              </div>
+              <div class="field">
+                <label for="dataInicio">Data de início</label>
+                <input type="date" id="dataInicio" name="dataInicio" required>
+              </div>
+              <div class="field">
+                <label for="dataFim">Data de término (opcional)</label>
+                <input type="date" id="dataFim" name="dataFim">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Instrutor &amp; Local</div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="instrutor">Instrutor / Palestrante</label>
+                <input type="text" id="instrutor" name="instrutor" placeholder="Prof. João da Silva" required>
+              </div>
+              <div class="field">
+                <label for="local">Local de realização</label>
+                <input type="text" id="local" name="local" placeholder="Vacaria, RS" required>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="instrCargo">Cargo do instrutor (opcional)</label>
+                <input type="text" id="instrCargo" name="instrCargo" placeholder="Prof. Especialista">
+              </div>
+              <div class="field">
+                <label for="modalidade">Modalidade (opcional)</label>
+                <input type="text" id="modalidade" name="modalidade" placeholder="Presencial" value="Presencial">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ MODO MÚLTIPLO ══ -->
+        <div id="multi-mode" style="display:none">
+          <div class="section">
+            <div class="section-title">Período de Referência</div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="periodoInicio">Período de início (opcional)</label>
+                <input type="date" id="periodoInicio" name="periodoInicio">
+              </div>
+              <div class="field">
+                <label for="periodoFim">Período de término (opcional)</label>
+                <input type="date" id="periodoFim" name="periodoFim">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Cursos realizados</div>
+            <div class="course-list" id="course-list"></div>
+            <button type="button" class="add-course-btn" onclick="addCourse()">
+              <span>＋</span> Adicionar curso
+            </button>
+          </div>
+        </div>
+
+        <!-- Campos opcionais (secretario, prefeito) -->
+        <div class="section" style="border-top: 1px solid var(--border); padding-top: 24px;">
+          <div class="section-title">Assinantes (opcional)</div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="secretario">Secretário(a) de Educação</label>
+              <input type="text" id="secretario" name="secretario" placeholder="Secretário(a) Municipal de Educação">
+            </div>
+            <div class="field">
+              <label for="prefeito">Prefeito(a)</label>
+              <input type="text" id="prefeito" name="prefeito" placeholder="Prefeito(a) Municipal">
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- SEÇÃO: PRÉ-VISUALIZAÇÃO                               -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" style="border-top: 1px solid var(--border); padding-top: 24px; margin-bottom: 20px;">
+          <div class="section-title">Pré-visualização</div>
+          <div id="preview-container" style="display: none; background: var(--cream-dark); border-radius: var(--radius); padding: 20px; border-left: 4px solid var(--gold);">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+              <strong style="color: var(--navy);">Dados do Certificado:</strong>
+            </div>
+            <div id="preview-content" style="font-size: 0.9rem; line-height: 1.6; color: var(--text);">
+              <!-- Preenchido dinamicamente -->
+            </div>
+          </div>
+          <p id="preview-empty" style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 16px;">
+            Preencha os dados acima e a pré-visualização será exibida aqui
+          </p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- SEÇÃO: GERAÇÃO EM LOTE (CSV)                           -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div class="section" style="border-top: 1px solid var(--border); padding-top: 24px; margin-bottom: 20px;">
+          <div class="section-title">Geração em Lote</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+            Carregue um arquivo CSV para gerar múltiplos certificados de uma vez. 
+            <a href="#" onclick="downloadCSVTemplate(event)" style="color: var(--gold); text-decoration: none; font-weight: 500;">Baixar modelo</a>
+          </p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <input type="file" id="csv-file" accept=".csv" style="
+              flex: 1; min-width: 200px;
+              padding: 10px 14px; border: 1.5px solid var(--border);
+              border-radius: 8px; font-family: 'Jost', sans-serif;
+              font-size: 0.9rem; color: var(--text);
+              cursor: pointer;
+            " onchange="previewCSV(event)">
+            <button type="button" class="submit-btn" id="batch-btn" onclick="processBatchCertificates()" style="width: auto; padding: 0 24px;">
+              <span class="spinner"></span>
+              <span class="btn-label">⚡ Gerar em lote</span>
+            </button>
+          </div>
+          <div id="batch-preview" style="display: none; margin-top: 16px; padding: 16px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #0066cc;">
+            <div style="font-size: 0.85rem; color: #0066cc; margin-bottom: 10px;">
+              <strong id="batch-count">0</strong> certificados prontos para gerar
+            </div>
+            <div id="batch-list" style="max-height: 200px; overflow-y: auto; font-size: 0.8rem; color: var(--text);"></div>
+          </div>
+        </div>
+
+        <div class="submit-wrap">
+          <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
+            <span class="spinner"></span>
+            <span class="btn-label">📜 &nbsp;Gerar &amp; baixar certificado</span>
+          </button>
+        </div>
+
+        <!-- Mensagem de erro/sucesso -->
+        <div id="message-container" style="margin-top: 20px; display: none; padding: 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 500;">
+          <span id="message-text"></span>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Certificado assinado digitalmente com <strong>certificado ICP-Brasil</strong>.
+  </p>
+
+<script>
+let courseCount = 0;
+let currentMode = 'single';
+
+/**
+ * Alterna entre modo único (individual) e múltiplo (anual)
+ */
+function setMode(mode) {
+  currentMode = mode;
+  const tipo = mode === 'single' ? 'individual' : 'anual';
+  document.getElementById('tipo-hidden').value = tipo;
+  
+  document.getElementById('single-mode').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('multi-mode').style.display  = mode === 'multi'  ? '' : 'none';
+  document.getElementById('btn-single').classList.toggle('active', mode === 'single');
+  document.getElementById('btn-multi').classList.toggle('active',  mode === 'multi');
+  
+  if (mode === 'multi' && document.querySelectorAll('.course-item').length === 0) {
+    addCourse();
+  }
+  
+  clearMessage();
+}
+
+/**
+ * Adiciona novo curso dinâmico (modo múltiplo)
+ * Os nomes dos inputs agora usam camelCase para sincronizar com a API
+ */
+function addCourse() {
+  courseCount++;
+  const n = courseCount;
+  const list = document.getElementById('course-list');
+  const num  = list.children.length + 1;
+  const div  = document.createElement('div');
+  div.className = 'course-item';
+  div.id = `course-${n}`;
+  div.innerHTML = `
+    <div class="item-label">Curso ${num}</div>
+    <button type="button" class="remove-btn" onclick="removeCourse(${n})" title="Remover">✕</button>
+    <div class="field" style="margin-bottom:12px">
+      <label>Nome do curso</label>
+      <input type="text" class="course-nome" data-id="${n}" placeholder="Ex: Gestão em Sala de Aula" required>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Instrutor / Palestrante</label>
+      <input type="text" class="course-instrutor" data-id="${n}" placeholder="Prof. João da Silva" required>
+    </div>
+    <div class="grid-3">
+      <div class="field">
+        <label>Carga horária (h)</label>
+        <input type="number" class="course-horas" data-id="${n}" min="1" placeholder="20" required>
+      </div>
+      <div class="field">
+        <label>Data de início</label>
+        <input type="date" class="course-inicio" data-id="${n}" required>
+      </div>
+      <div class="field">
+        <label>Data de término</label>
+        <input type="date" class="course-fim" data-id="${n}">
+      </div>
+    </div>
+  `;
+  list.appendChild(div);
+}
+
+/**
+ * Remove um curso dinâmico
+ */
+function removeCourse(n) {
+  const el = document.getElementById(`course-${n}`);
+  if (!el) return;
+  el.style.transition = 'opacity .18s, transform .18s';
+  el.style.opacity = '0';
+  el.style.transform = 'scale(.97)';
+  setTimeout(() => { el.remove(); renumber(); }, 200);
+}
+
+/**
+ * Renumera os cursos após remover um
+ */
+function renumber() {
+  document.querySelectorAll('.course-item .item-label').forEach((lbl, i) => {
+    lbl.textContent = `Curso ${i + 1}`;
+  });
+}
+
+/**
+ * Exibe mensagem de erro/sucesso
+ */
+function showMessage(text, isError = true) {
+  const container = document.getElementById('message-container');
+  const msgText = document.getElementById('message-text');
+  msgText.textContent = text;
+  container.style.display = 'block';
+  container.style.background = isError ? '#fee' : '#efe';
+  container.style.color = isError ? '#c33' : '#3c3';
+  container.style.borderLeft = `4px solid ${isError ? '#c33' : '#3c3'}`;
+}
+
+/**
+ * Limpa mensagem
+ */
+function clearMessage() {
+  document.getElementById('message-container').style.display = 'none';
+}
+
+/**
+ * Coleta dados do formulário e converte para JSON
+ */
+function collectFormData() {
+  const tipo = document.getElementById('tipo-hidden').value;
+  const nome = document.getElementById('nome').value.trim();
+  const cargo = document.getElementById('cargo').value.trim();
+  const matricula = document.getElementById('matricula').value.trim();
+  const secretario = document.getElementById('secretario').value.trim();
+  const prefeito = document.getElementById('prefeito').value.trim();
+
+  const payload = {
+    tipo,
+    nome,
+    ...(cargo && { cargo }),
+    ...(matricula && { matricula }),
+    ...(secretario && { secretario }),
+    ...(prefeito && { prefeito }),
+  };
+
+  if (tipo === 'individual') {
+    // Modo único
+    const curso = document.getElementById('curso').value.trim();
+    const horas = document.getElementById('horas').value.trim();
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const instrutor = document.getElementById('instrutor').value.trim();
+    const local = document.getElementById('local').value.trim();
+    const instrCargo = document.getElementById('instrCargo').value.trim();
+    const modalidade = document.getElementById('modalidade').value.trim();
+
+    payload.curso = curso;
+    payload.horas = horas;
+    payload.dataInicio = dataInicio;
+    if (dataFim) payload.dataFim = dataFim;
+    payload.instrutor = instrutor;
+    payload.local = local;
+    if (instrCargo) payload.instrCargo = instrCargo;
+    if (modalidade) payload.modalidade = modalidade;
+  } else if (tipo === 'anual') {
+    // Modo múltiplo
+    const periodoInicio = document.getElementById('periodoInicio').value;
+    const periodoFim = document.getElementById('periodoFim').value;
+    
+    if (periodoInicio) payload.periodoInicio = periodoInicio;
+    if (periodoFim) payload.periodoFim = periodoFim;
+
+    const cursos = [];
+    document.querySelectorAll('.course-item').forEach((item) => {
+      const curso = {
+        nome: item.querySelector('.course-nome').value.trim(),
+        instrutor: item.querySelector('.course-instrutor').value.trim(),
+        horas: item.querySelector('.course-horas').value.trim(),
+        inicio: item.querySelector('.course-inicio').value,
+        fim: item.querySelector('.course-fim').value,
+      };
+      if (curso.nome && curso.instrutor && curso.horas && curso.inicio) {
+        cursos.push(curso);
+      }
+    });
+    
+    payload.cursos = cursos;
+  }
+
+  return payload;
+}
+
+/**
+ * Valida dados do formulário
+ */
+function validateForm() {
+  const tipo = document.getElementById('tipo-hidden').value;
+  const nome = document.getElementById('nome').value.trim();
+
+  if (!nome) {
+    showMessage('Por favor, informe o nome do aluno.');
+    return false;
+  }
+
+  if (tipo === 'individual') {
+    const curso = document.getElementById('curso').value.trim();
+    const horas = document.getElementById('horas').value.trim();
+    const dataInicio = document.getElementById('dataInicio').value;
+    const instrutor = document.getElementById('instrutor').value.trim();
+    const local = document.getElementById('local').value.trim();
+
+    if (!curso) {
+      showMessage('Por favor, informe o nome do curso.');
+      return false;
+    }
+    if (!horas) {
+      showMessage('Por favor, informe a carga horária.');
+      return false;
+    }
+    if (!dataInicio) {
+      showMessage('Por favor, informe a data de início.');
+      return false;
+    }
+    if (!instrutor) {
+      showMessage('Por favor, informe o nome do instrutor.');
+      return false;
+    }
+    if (!local) {
+      showMessage('Por favor, informe o local de realização.');
+      return false;
+    }
+  } else if (tipo === 'anual') {
+    const items = document.querySelectorAll('.course-item');
+    if (items.length === 0) {
+      showMessage('Adicione ao menos um curso.');
+      return false;
+    }
+    for (let i = 0; i < items.length; i++) {
+      const nome = items[i].querySelector('.course-nome').value.trim();
+      const horas = items[i].querySelector('.course-horas').value.trim();
+      const inicio = items[i].querySelector('.course-inicio').value;
+      
+      if (!nome) {
+        showMessage(`Informe o nome do Curso ${i + 1}.`);
+        return false;
+      }
+      if (!horas) {
+        showMessage(`Informe a carga horária do Curso ${i + 1}.`);
+        return false;
+      }
+      if (!inicio) {
+        showMessage(`Informe a data de início do Curso ${i + 1}.`);
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Envia o formulário via fetch JSON para /api/gerar-certificado
+ */
+async function submitForm() {
+  clearMessage();
+
+  // Valida dados
+  if (!validateForm()) {
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading');
+
+  try {
+    const payload = collectFormData();
+    
+    const response = await fetch('/api/gerar-certificado', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    // Sucesso: baixar PDF
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `certificado_${document.getElementById('nome').value.replace(/\s+/g, '_')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+
+    showMessage('✓ Certificado gerado e baixado com sucesso!', false);
+  } catch (error) {
+    console.error('Erro:', error);
+    showMessage(`✗ Erro ao gerar certificado: ${error.message}`);
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+/**
+ * Atualiza a pré-visualização dos dados preenchidos
+ */
+function updatePreview() {
+  const tipo = document.getElementById('tipo-hidden').value;
+  const nome = document.getElementById('nome').value.trim();
+  
+  if (!nome) {
+    document.getElementById('preview-container').style.display = 'none';
+    document.getElementById('preview-empty').style.display = 'block';
+    return;
+  }
+
+  const cargo = document.getElementById('cargo').value.trim();
+  const matricula = document.getElementById('matricula').value.trim();
+  
+  let preview = '<dl style="margin: 0;">';
+  preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Nome:</dt>`;
+  preview += `<dd style="margin: 0 0 8px 0;">${nome}</dd>`;
+  
+  if (cargo) {
+    preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Cargo:</dt>`;
+    preview += `<dd style="margin: 0 0 8px 0;">${cargo}</dd>`;
+  }
+  
+  if (matricula) {
+    preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Matrícula:</dt>`;
+    preview += `<dd style="margin: 0 0 8px 0;">${matricula}</dd>`;
+  }
+
+  if (tipo === 'individual') {
+    const curso = document.getElementById('curso').value.trim();
+    const horas = document.getElementById('horas').value.trim();
+    const dataInicio = document.getElementById('dataInicio').value;
+    
+    if (curso) {
+      preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Curso:</dt>`;
+      preview += `<dd style="margin: 0 0 8px 0;">${curso}</dd>`;
+    }
+    if (horas) {
+      preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Carga Horária:</dt>`;
+      preview += `<dd style="margin: 0 0 8px 0;">${horas} horas</dd>`;
+    }
+    if (dataInicio) {
+      preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Data de Início:</dt>`;
+      preview += `<dd style="margin: 0 0 8px 0;">${new Date(dataInicio).toLocaleDateString('pt-BR')}</dd>`;
+    }
+  } else if (tipo === 'anual') {
+    const items = document.querySelectorAll('.course-item');
+    if (items.length > 0) {
+      preview += `<dt style="font-weight: 600; color: var(--navy); margin-top: 8px;">Cursos a registrar:</dt>`;
+      preview += `<dd style="margin: 0 0 8px 0;"><em>${items.length} curso(s)</em></dd>`;
+    }
+  }
+
+  preview += '</dl>';
+  
+  document.getElementById('preview-content').innerHTML = preview;
+  document.getElementById('preview-container').style.display = 'block';
+  document.getElementById('preview-empty').style.display = 'none';
+}
+
+/**
+ * Download do modelo de CSV
+ */
+function downloadCSVTemplate(e) {
+  e.preventDefault();
+  const tipo = document.getElementById('tipo-hidden').value;
+  
+  let csvContent = 'data:text/csv;charset=utf-8,';
+  
+  if (tipo === 'individual') {
+    csvContent += 'nome,cargo,matricula,curso,cargaHoraria,dataInicio,dataFim,instrutor,instrCargo,modalidade,local\n';
+    csvContent += 'João Silva,Professor,12345,Excel Avançado,40,2024-01-15,2024-02-15,Maria Santos,Especialista,Presencial,Sala 101\n';
+  } else {
+    csvContent += 'nome,cargo,matricula,periodoInicio,periodoFim,curso1,curso1_horas,curso1_inicio,curso1_fim,curso1_modalidade,curso1_local\n';
+    csvContent += 'Ana Costa,Coordenadora,67890,2024-01-01,2024-12-31,Excel Básico,20,2024-01-15,2024-02-15,Presencial,Sala 101\n';
+  }
+  
+  const link = document.createElement('a');
+  link.setAttribute('href', encodeURI(csvContent));
+  link.setAttribute('download', 'modelo_certificados.csv');
+  link.click();
+}
+
+/**
+ * Parser simples de CSV
+ */
+function parseCSVData(csvText) {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '') continue;
+    
+    const values = lines[i].split(',').map(v => v.trim());
+    const row = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] || '';
+    });
+    rows.push(row);
+  }
+  
+  return rows;
+}
+
+/**
+ * Preview dos dados do CSV
+ */
+function previewCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const csvData = parseCSVData(e.target.result);
+      const batchPreview = document.getElementById('batch-preview');
+      const batchCount = document.getElementById('batch-count');
+      const batchList = document.getElementById('batch-list');
+      
+      batchCount.textContent = csvData.length;
+      
+      let listHTML = '';
+      csvData.forEach((row, idx) => {
+        listHTML += `<div style="padding: 6px 0; border-bottom: 1px solid #ddd;">`;
+        listHTML += `<strong>${idx + 1}.</strong> ${row.nome || '(sem nome)'}`;
+        if (row.cargo) listHTML += ` - ${row.cargo}`;
+        listHTML += `</div>`;
+      });
+      
+      batchList.innerHTML = listHTML;
+      batchPreview.style.display = 'block';
+      
+      // Armazena os dados para processamento
+      window.batchData = csvData;
+    } catch (error) {
+      showMessage(`Erro ao processar CSV: ${error.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/**
+ * Processa certificados em lote (com delay entre requisições)
+ */
+async function processBatchCertificates() {
+  if (!window.batchData || window.batchData.length === 0) {
+    showMessage('Carregue um arquivo CSV primeiro.');
+    return;
+  }
+  
+  const btn = document.getElementById('batch-btn');
+  btn.classList.add('loading');
+  
+  try {
+    const tipo = document.getElementById('tipo-hidden').value;
+    const secretario = document.getElementById('secretario').value.trim();
+    const prefeito = document.getElementById('prefeito').value.trim();
+    
+    let processed = 0;
+    const failed = [];
+    
+    for (const row of window.batchData) {
+      try {
+        const payload = {
+          tipo,
+          nome: row.nome || 'Servidor(a)',
+          ...(row.cargo && { cargo: row.cargo }),
+          ...(row.matricula && { matricula: row.matricula }),
+          ...(secretario && { secretario }),
+          ...(prefeito && { prefeito }),
+        };
+        
+        if (tipo === 'individual') {
+          payload.curso = row.curso || 'Curso';
+          payload.cargaHoraria = row.cargaHoraria || '';
+          payload.dataInicio = row.dataInicio || '';
+          if (row.dataFim) payload.dataFim = row.dataFim;
+          payload.instrutor = row.instrutor || '';
+          payload.local = row.local || '';
+          if (row.instrCargo) payload.instrCargo = row.instrCargo;
+          if (row.modalidade) payload.modalidade = row.modalidade;
+        } else if (tipo === 'anual') {
+          if (row.periodoInicio) payload.periodoInicio = row.periodoInicio;
+          if (row.periodoFim) payload.periodoFim = row.periodoFim;
+          payload.cursos = [];
+        }
+        
+        const response = await fetch('/api/gerar-certificado', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `certificado_${row.nome.replace(/\s+/g, '_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        
+        processed++;
+        
+        // Delay entre requisições
+        await new Promise(r => setTimeout(r, 500));
+      } catch (err) {
+        failed.push(row.nome || '(sem nome)');
+      }
+    }
+    
+    let msg = `✓ ${processed} certificado(s) gerado(s) com sucesso!`;
+    if (failed.length > 0) {
+      msg += ` (${failed.length} falha(s): ${failed.join(', ')})`;
+    }
+    showMessage(msg, failed.length > 0);
+  } catch (error) {
+    console.error('Erro:', error);
+    showMessage(`✗ Erro ao processar lote: ${error.message}`);
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+/**
+ * Listener para atualizar preview conforme digita
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  const inputsPreview = [
+    'nome', 'cargo', 'matricula', 'curso', 'horas', 'dataInicio'
+  ];
+  
+  inputsPreview.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    }
+  });
+});
+
+// Inicializa em modo único
+setMode('single');
+</script>
+</body>
+</html>

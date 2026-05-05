@@ -1,0 +1,120 @@
+================================================================================
+ETAPA 8: SANEAMENTO DE DEPENDÊNCIAS NO PACKAGE.JSON
+================================================================================
+Data: 2026-05-05
+Status: ✓ CONCLUÍDO COM SUCESSO
+
+================================================================================
+1. ANÁLISE INICIAL
+================================================================================
+Dependências instaladas (dependencies): 10
+  - @pdf-lib/fontkit
+  - @signpdf/placeholder-pdf-lib
+  - @signpdf/signer-p12
+  - @signpdf/signpdf
+  - body-parser
+  - dotenv
+  - express
+  - node-forge
+  - node-signpdf
+  - pdf-lib
+
+DevDependencies: 3
+  - autoprefixer
+  - postcss
+  - tailwindcss
+
+================================================================================
+2. AUDITORIA DE CÓDIGO
+================================================================================
+Arquivos analisados:
+  ✓ ./api/gerar-certificado.js
+  ✓ ./tailwind.config.js
+  ✓ ./server.js
+  ✓ ./src/utils/text.js
+  ✓ ./src/config/constants.js
+  ✓ ./src/services/fontService.js
+  ✓ ./src/services/pdfService.js
+  ✓ ./src/services/visualService.js
+
+================================================================================
+3. DEPENDÊNCIAS UTILIZADAS
+================================================================================
+DEPENDENCIES (5 utilizadas):
+  ✓ @pdf-lib/fontkit (importado em fontService.js)
+  ✓ body-parser (requerido em server.js)
+  ✓ dotenv (requerido em server.js e gerar-certificado.js)
+  ✓ express (requerido em server.js)
+  ✓ pdf-lib (requerido em pdfService.js e constants.js)
+
+DEVDEPENDENCIES (3 utilizadas):
+  ✓ autoprefixer (configurado em postcss.config.js)
+  ✓ postcss (configurado em postcss.config.js)
+  ✓ tailwindcss (configurado em tailwind.config.js e usado em public/styles.css)
+
+================================================================================
+4. DEPENDÊNCIAS REMOVIDAS
+================================================================================
+✗ @signpdf/placeholder-pdf-lib  (não encontrada em nenhum import/require)
+✗ @signpdf/signer-p12           (não encontrada em nenhum import/require)
+✗ @signpdf/signpdf             (não encontrada em nenhum import/require)
+✗ node-forge                     (não encontrada em nenhum import/require)
+✗ node-signpdf                   (não encontrada em nenhum import/require)
+
+Total removido: 5 dependências + 1 dependência transitiva (6 pacotes no total)
+
+================================================================================
+5. VERIFICAÇÃO SINTÁTICA
+================================================================================
+✓ api/gerar-certificado.js        OK
+✓ src/services/pdfService.js      OK
+✓ src/services/fontService.js     OK
+✓ server.js                       OK
+✓ src/config/constants.js         OK
+
+npm prune result:
+  - Removidos: 6 pacotes
+  - Auditados: 153 pacotes
+  - Status: Sucesso
+
+================================================================================
+6. COMMIT GIT
+================================================================================
+Commit Hash: 3386c72
+Mensagem: chore: remove dependências não utilizadas e limpa package.json
+Arquivos modificados:
+  - package.json (5 linhas removidas)
+  - package-lock.json (105 linhas removidas)
+
+================================================================================
+7. RESULTADO FINAL
+================================================================================
+package.json (Antes):    10 dependencies + 3 devDependencies = 13 total
+package.json (Depois):    5 dependencies + 3 devDependencies =  8 total
+Redução: 5 dependências não utilizadas removidas (38% de redução)
+
+Dependencies finais:
+  - @pdf-lib/fontkit
+  - body-parser
+  - dotenv
+  - express
+  - pdf-lib
+
+DevDependencies finais:
+  - autoprefixer
+  - postcss
+  - tailwindcss
+
+================================================================================
+BENEFÍCIOS DA LIMPEZA:
+================================================================================
+✓ Redução de tamanho do node_modules
+✓ Dependências desnecessárias removidas
+✓ Projeto mais limpo e manutenível
+✓ Melhor segurança (menos código-terceiro para auditar)
+✓ Builds mais rápidos
+✓ Histórico git mais claro
+
+================================================================================
+CONCLUSÃO: ETAPA 8 COMPLETADA COM SUCESSO
+================================================================================

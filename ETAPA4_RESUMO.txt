@@ -1,0 +1,159 @@
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                     RESUMO EXECUTIVO - ETAPA 4                            ║
+║                  REFATORAÇÃO EM MÓDULOS/UTILITÁRIOS                        ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+🎯 OBJETIVO
+─────────────────────────────────────────────────────────────────────────────
+Refatorar a estrutura do projeto certificado-gerador, separando a lógica em 
+módulos especializados para melhorar manutenibilidade, testabilidade e 
+reutilização de código.
+
+✅ TAREFAS COMPLETADAS
+─────────────────────────────────────────────────────────────────────────────
+
+[✓] 1. Criar pasta src/ na raiz do projeto
+    └─ Criada com subdiretórios: config/, utils/, services/
+
+[✓] 2. Criar módulos de configuração e utilitários
+    ├─ src/config/constants.js        (41 linhas)
+    ├─ src/utils/validator.js         (99 linhas)
+    ├─ src/utils/formatter.js         (38 linhas)
+    ├─ src/utils/text.js              (39 linhas)
+    └─ src/utils/drawing.js           (19 linhas)
+
+[✓] 3. Criar módulos de serviço
+    ├─ src/services/fontService.js    (43 linhas)
+    ├─ src/services/pdfService.js     (253 linhas)
+    ├─ src/services/visualService.js  (101 linhas)
+    └─ src/services/signatureService.js (36 linhas)
+
+[✓] 4. Refatorar api/gerar-certificado.js
+    ├─ Antes: 1108 linhas (lógica misturada)
+    ├─ Depois: ~115 linhas (controller enxuto)
+    └─ Redução: ~90%
+
+[✓] 5. Garantir caminhos relativos corretos
+    └─ Todos os requires testados e validados
+
+[✓] 6. Testar sintaxe com node -c
+    ├─ api/gerar-certificado.js .................... ✓
+    ├─ src/config/constants.js ..................... ✓
+    ├─ src/utils/validator.js ...................... ✓
+    ├─ src/utils/formatter.js ...................... ✓
+    ├─ src/utils/text.js .......................... ✓
+    ├─ src/utils/drawing.js ........................ ✓
+    ├─ src/services/fontService.js ................ ✓
+    ├─ src/services/pdfService.js ................. ✓
+    ├─ src/services/visualService.js .............. ✓
+    └─ src/services/signatureService.js ........... ✓
+
+[✓] 7. Fazer commit
+    └─ 6e9d504 - refactor: extrai lógica para módulos em src/utils e src/services
+
+[✓] 8. Exibir estrutura final
+    └─ Mostrado acima com tree/find
+
+📊 METRICAS DA REFATORAÇÃO
+─────────────────────────────────────────────────────────────────────────────
+
+Arquivo                  | Antes | Depois | % Mudança
+─────────────────────────┼───────┼────────┼──────────
+api/gerar-certificado.js | 1108  |  ~115  | -90%
+Total de arquivos        | 1     | 10     | +900%
+Linhas em modules        | 0     | 669    | +669
+Complexidade módulos     | ∞     | ⬇️⬇️⬇️  | Reduzida
+
+🏗️  ARQUITETURA DA SOLUÇÃO
+─────────────────────────────────────────────────────────────────────────────
+
+Request (POST)
+    ↓
+api/gerar-certificado.js (Handler)
+    ├─→ validarRequisicaoIndividual/Anual() [utils/validator.js]
+    ├─→ obterDataHoje() [utils/formatter.js]
+    └─→ gerarIndividual/Anual() [services/pdfService.js]
+        ├─→ carregarFontes() [services/fontService.js]
+        │   └─→ FONT_PATHS [config/constants.js]
+        ├─→ desenharBorda/Cabeçalho/Titulo/Rodape() [services/visualService.js]
+        │   ├─→ centro/centroBloco/truncar() [utils/text.js]
+        │   ├─→ linha() [utils/drawing.js]
+        │   └─→ COR/W/H [config/constants.js]
+        └─→ fmtCurta/truncar() [utils/formatter.js / utils/text.js]
+    ↓
+PDF Response
+
+📋 RESPONSABILIDADES POR MÓDULO
+─────────────────────────────────────────────────────────────────────────────
+
+config/constants.js
+├─ COR: Paleta de cores RGB (verde, dourado, preto, etc)
+├─ W, H: Dimensões A4 Paisagem em pontos
+└─ FONT_PATHS: Caminhos das fontes TTF
+
+utils/validator.js
+├─ validarNome(nome)
+├─ validarData(data)
+├─ validarHoras(horas)
+├─ validarCursos(cursos)
+├─ validarRequisicaoIndividual(body)
+└─ validarRequisicaoAnual(body)
+
+utils/formatter.js
+├─ fmtData(str) — YYYY-MM-DD → "d de mês de yyyy"
+├─ fmtCurta(str) — YYYY-MM-DD → "dd/mm/yyyy"
+└─ obterDataHoje() → "YYYY-MM-DD"
+
+utils/text.js
+├─ centro(page, text, ...) — Centraliza na página
+├─ centroBloco(page, text, ...) — Centraliza em bloco
+└─ truncar(text, ...) — Trunca com reticências
+
+utils/drawing.js
+└─ linha(page, x1, y1, x2, y2, cor) — Desenha linha
+
+services/fontService.js
+└─ carregarFontes(pdfDoc) → {regular, bold, italic, ...}
+
+services/pdfService.js
+├─ gerarIndividual(d) → pdfBytes
+└─ gerarAnual(d) → pdfBytes
+
+services/visualService.js
+├─ desenharBorda(page)
+├─ desenharMarcaDagua(page, f)
+├─ desenharCabecalho(page, f)
+├─ desenharTitulo(page, f, yBase)
+└─ desenharRodape(page, f, prefeito, secretario, dataEmissao)
+
+services/signatureService.js
+├─ carregarCertificado(caminhoP12, senha) [TODO]
+└─ assinarPDF(pdfBytes, certificado) [TODO]
+
+🚀 PRÓXIMAS ETAPAS RECOMENDADAS
+─────────────────────────────────────────────────────────────────────────────
+
+1. TESTES UNITÁRIOS
+   └─ Testar validadores, formatadores isoladamente
+   └─ Cobertura mínima: 80%
+
+2. ASSINATURA DIGITAL
+   └─ Implementar signatureService.js com p12sign ou similar
+
+3. DOCUMENTAÇÃO
+   └─ Adicionar JSDoc nos módulos
+   └─ Atualizar README com nova arquitetura
+
+4. INTEGRAÇÃO CONTÍNUA
+   └─ Adicionar linting (eslint)
+   └─ Adicionar formatação automática (prettier)
+
+5. MONITORAMENTO
+   └─ Logs estruturados nos serviços
+   └─ Tratamento de erros específicos por tipo
+
+═════════════════════════════════════════════════════════════════════════════
+
+Etapa 4 Concluída com Sucesso! ✨
+

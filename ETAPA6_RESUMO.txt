@@ -1,0 +1,68 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        ETAPA 6 — OTIMIZAÇÃO DE PERFORMANCE
+                    Pré-carregamento de Fontes em Memória
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 OBJETIVO
+───────────
+Otimizar o carregamento de fontes TTF, evitando leituras repetidas do disco
+a cada geração de certificado.
+
+✅ ANÁLISE REALIZADA
+────────────────────
+1. ✓ Analisado arquivo: src/services/fontService.js
+2. ✓ Identificado problema: fs.readFileSync() chamado a cada requisição
+3. ✓ Verificada existência de outras operações de I/O pesadas
+4. ✓ Nenhuma outra operação de I/O encontrada no código-fonte
+
+🔧 OTIMIZAÇÕES IMPLEMENTADAS
+──────────────────────────────
+
+1. CACHE DE BYTES DE FONTES (NOVO)
+   ├─ Implementado IIFE (Immediately Invoked Function Expression)
+   ├─ Executa fs.readFileSync() UMA ÚNICA VEZ na inicialização do módulo
+   ├─ Armazena bytes em memória no objeto FONT_BYTES_CACHE
+   └─ Todas as 6 fontes pré-carregadas no startup
+
+2. REUTILIZAÇÃO DE BYTES
+   ├─ Função carregarFontes() agora usa FONT_BYTES_CACHE
+   ├─ Elimina I/O de disco repetido a cada requisição
+   └─ Mantém fallback para StandardFonts quando arquivo não existe
+
+📊 IMPACTO DE PERFORMANCE
+──────────────────────────
+• ANTES: 6 × fs.readFileSync() por requisição = I/O lento
+• DEPOIS: 0 × fs.readFileSync() por requisição = I/O rápido
+
+Estimativa:
+  - Cada leitura de fonte: ~100-650 KB (6 fontes = ~2.4 MB)
+  - Requisições simultâneas: sem contenção (bytes em memória)
+  - Tempo economizado: 10-50ms por requisição (dependendo I/O)
+
+🔍 VALIDAÇÃO REALIZADA
+───────────────────────
+✓ Sintaxe do fontService.js: VÁLIDA (node -c)
+✓ Sintaxe do pdfService.js:  VÁLIDA (node -c)
+✓ Commit realizado:          a7e5605
+✓ Mensagem do commit:        "perf: pré-carrega fontes e recursos em memória..."
+
+📦 RECURSOS OTIMIZADOS
+───────────────────────
+Pré-carregados em memória no startup:
+  • CormorantGaramond-Regular.ttf    (666 KB)
+  • CormorantGaramond-Bold.ttf       (666 KB)
+  • CormorantGaramond-Italic.ttf     (407 KB)
+  • CormorantGaramond-BoldItalic.ttf (407 KB)
+  • OpenSans-Regular.ttf             (131 KB)
+  • OpenSans-Bold.ttf                (131 KB)
+  ────────────────────────────────────────────
+  TOTAL: ~2.4 MB em memória (carregado UMA VEZ)
+
+✨ PRÓXIMAS ETAPAS SUGERIDAS
+─────────────────────────────
+1. Monitorar uso de memória em produção
+2. Implementar compressão de PDFs gerados
+3. Cache de resultados PDF inteiros (se houver PDFs com dados idênticos)
+4. Otimizar renderização de elementos visuais (desenhos/formas)
+
+═══════════════════════════════════════════════════════════════════════════════
