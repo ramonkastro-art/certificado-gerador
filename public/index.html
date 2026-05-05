@@ -507,7 +507,7 @@ function collectFormData() {
     const modalidade = document.getElementById('modalidade').value.trim();
 
     payload.curso = curso;
-    payload.horas = horas;
+    payload.cargaHoraria = horas;
     payload.dataInicio = dataInicio;
     if (dataFim) payload.dataFim = dataFim;
     payload.instrutor = instrutor;
@@ -839,7 +839,7 @@ async function processBatchCertificates() {
         
         if (tipo === 'individual') {
           payload.curso = row.curso || 'Curso';
-          payload.cargaHoraria = row.cargaHoraria || '';
+          payload.cargaHoraria = row.cargaHoraria || '0';
           payload.dataInicio = row.dataInicio || '';
           if (row.dataFim) payload.dataFim = row.dataFim;
           payload.instrutor = row.instrutor || '';
