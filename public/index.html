@@ -37,12 +37,13 @@
 
     .page-header { text-align: center; margin-bottom: 40px; }
     .seal {
-      width: 68px; height: 68px;
-      border: 2px solid var(--gold); border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px; background: var(--navy);
-      box-shadow: 0 0 0 6px rgba(184,151,58,.15), 0 4px 20px rgba(13,31,60,.2);
-    }
+   width: 88px; height: 88px;
+   border-radius: 50%;
+   display: flex; align-items: center; justify-content: center;
+   margin: 0 auto 18px;
+   box-shadow: 0 4px 20px rgba(13,31,60,.2);
+   overflow: hidden;
+   }
     .page-header h1 {
       font-family: 'Cormorant Garamond', serif;
       font-size: clamp(1.8rem, 4vw, 2.6rem);
@@ -172,10 +173,7 @@
 
   <header class="page-header">
     <div class="seal">
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="18" cy="18" r="14" stroke="#B8973A" stroke-width="1.5" stroke-dasharray="3 2"/>
-        <path d="M18 6L20.8 14.2H29.4L22.3 19.3L25.1 27.5L18 22.4L10.9 27.5L13.7 19.3L6.6 14.2H15.2L18 6Z" fill="#B8973A"/>
-      </svg>
+   <img src="/logo_smed.png" alt="Logo SMED" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover;">
     </div>
     <h1>Emissão de Certificado</h1>
     <p>Secretaria Municipal de Educação · Vacaria / RS</p>
