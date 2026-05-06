@@ -32,14 +32,14 @@ function desenharBorda(page) {
 }
 
 /**
- * Desenha marca d'água com o logo SMED (sem caracteres Unicode especiais)
+ * Desenha marca d'água com o logo SMED
  */
 async function desenharMarcaDagua(page, f, pdfDoc) {
   try {
     const logoPath = path.join(process.cwd(), 'assets', 'logo_smed.png');
     const logoBytes = fs.readFileSync(logoPath);
     const logoImage = await pdfDoc.embedPng(logoBytes);
-    const size = 220;
+    const size = 200;
     page.drawImage(logoImage, {
       x: W / 2 - size / 2,
       y: H / 2 - size / 2,
@@ -48,7 +48,7 @@ async function desenharMarcaDagua(page, f, pdfDoc) {
       opacity: 0.04,
     });
   } catch (err) {
-    console.warn('[visualService] Marca d\'agua ignorada:', err.message);
+    console.warn('[visualService] Marca dagua ignorada:', err.message);
   }
 }
 
@@ -58,20 +58,20 @@ async function desenharMarcaDagua(page, f, pdfDoc) {
 async function desenharCabecalho(page, f, pdfDoc) {
   const y = H - 52;
   linha(page, 56, y + 14, W - 56, y + 14, COR.dourado, 0.4);
-  centro(page, 'PREFEITURA MUNICIPAL DE VACARIA', f.sans, 7, y, COR.cinza);
-  centro(page, 'SECRETARIA MUNICIPAL DE EDUCAÇÃO', f.sansBold, 9.5, y - 13, COR.verde);
-  centro(page, 'Vacaria — Rio Grande do Sul', f.sans, 7, y - 24, COR.cinza);
-  linha(page, 56, y - 34, W - 56, y - 34, COR.dourado, 0.4);
+  centro(page, 'PREFEITURA MUNICIPAL DE VACARIA', f.sans, 8, y, COR.cinza);
+  centro(page, 'SECRETARIA MUNICIPAL DE EDUCAÇÃO', f.sansBold, 11, y - 15, COR.verde);
+  centro(page, 'Vacaria — Rio Grande do Sul', f.sans, 8, y - 28, COR.cinza);
+  linha(page, 56, y - 38, W - 56, y - 38, COR.dourado, 0.4);
 
   // Logo no canto superior esquerdo
   try {
     const logoPath = path.join(process.cwd(), 'assets', 'logo_smed.png');
     const logoBytes = fs.readFileSync(logoPath);
     const logoImage = await pdfDoc.embedPng(logoBytes);
-    const logoSize = 44;
+    const logoSize = 52;
     page.drawImage(logoImage, {
       x: 56,
-      y: y - 22,
+      y: y - 26,
       width: logoSize,
       height: logoSize,
     });
@@ -79,43 +79,33 @@ async function desenharCabecalho(page, f, pdfDoc) {
     console.warn('[visualService] Logo do cabecalho ignorado:', err.message);
   }
 
-  return y - 34;
+  return y - 38;
 }
 
 /**
- * Desenha título "CERTIFICADO" — sem caracteres Unicode especiais
+ * Desenha título "CERTIFICADO"
  */
 function desenharTitulo(page, f, yBase) {
-  const y = yBase - 40;
-  centro(page, 'C  E  R  T  I  F  I  C  A  D  O', f.bold, 26, y, COR.verde);
-  // Divisor ornamental usando apenas linhas e círculo (sem glyphs especiais)
+  const y = yBase - 44;
+  centro(page, 'C  E  R  T  I  F  I  C  A  D  O', f.bold, 30, y, COR.verde);
   const mid = W / 2;
-  linha(page, mid - 130, y - 9, mid - 5,  y - 9, COR.dourado, 0.8);
-  linha(page, mid + 5,   y - 9, mid + 130, y - 9, COR.dourado, 0.8);
-  page.drawCircle({ x: mid, y: y - 9, size: 2.5, color: COR.dourado });
-  return y - 14;
+  linha(page, mid - 140, y - 10, mid - 5, y - 10, COR.dourado, 0.8);
+  linha(page, mid + 5,   y - 10, mid + 140, y - 10, COR.dourado, 0.8);
+  page.drawCircle({ x: mid, y: y - 10, size: 3, color: COR.dourado });
+  return y - 16;
 }
 
 /**
- * Desenha rodapé com assinaturas
+ * Desenha rodapé apenas com data e código de verificação
+ * (sem linhas de assinatura — autenticação feita pelo QR Code)
  */
-function desenharRodape(page, f, prefeito, secretario, dataEmissao) {
-  const yL = 64;
-  const yN = 54;
-  const yC = 44;
-
-  // Assinatura esquerda — Prefeito
-  linha(page, 82, yL, 282, yL, COR.preto, 0.5);
-  centroBloco(page, prefeito, f.sansBold, 8, yN, 82, 200, COR.preto);
-  centroBloco(page, 'Prefeito(a) Municipal de Vacaria/RS', f.sans, 7.5, yC, 82, 200, COR.cinza);
-
+function desenharRodape(page, f, dataEmissao) {
+  // Linha separadora acima do rodapé
+  linha(page, 56, 90, W - 56, 90, COR.dourado, 0.3);
   // Data centralizada
-  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, yN, COR.cinza);
-
-  // Assinatura direita — Secretário(a)
-  linha(page, W - 282, yL, W - 82, yL, COR.preto, 0.5);
-  centroBloco(page, secretario, f.sansBold, 8, yN, W - 282, 200, COR.preto);
-  centroBloco(page, 'Secretário(a) Municipal de Educação', f.sans, 7.5, yC, W - 282, 200, COR.cinza);
+  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 9, 72, COR.cinza);
+  // Nota de autenticidade
+  centro(page, 'Documento autentico — valide pelo QR Code', f.italic, 7.5, 56, COR.cinza);
 }
 
 module.exports = {
