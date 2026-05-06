@@ -10,7 +10,7 @@ const {
   desenharTitulo,
   desenharRodape,
 } = require('./visualService');
-const { centro, centroBloco, truncar } = require('../utils/text');
+const { centro, truncar } = require('../utils/text');
 const { linha } = require('../utils/drawing');
 const { fmtCurta } = require('../utils/formatter');
 const { gerarCodigoVerificacao, gerarURLVerificacao } = require('../utils/verificationCode');
@@ -20,11 +20,6 @@ const { gerarQRCode } = require('../utils/qrCodeGenerator');
 //  HELPERS
 // ══════════════════════════════════════════════════════════════
 
-/**
- * Aplica o background PNG na página.
- * O background tem logos na faixa inferior (~130px) — o conteúdo
- * do certificado fica acima dessa área para não haver sobreposição.
- */
 async function aplicarBackground(page, pdfDoc) {
   try {
     const bgPath = path.join(process.cwd(), 'assets', 'background.png');
@@ -32,15 +27,22 @@ async function aplicarBackground(page, pdfDoc) {
     const bgImage = await pdfDoc.embedPng(bgBytes);
     page.drawImage(bgImage, { x: 0, y: 0, width: W, height: H });
   } catch (err) {
-    console.warn('[pdfService] Background ignorado, usando cor solida:', err.message);
+    console.warn('[pdfService] Background ignorado:', err.message);
     page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: COR.fundo });
   }
 }
 
-// Área segura de conteúdo:
-// Topo: o cabeçalho começa em H - 52
-// Base: o background tem logos até ~130px do fundo, então conteúdo termina em y = 140
-const Y_BASE_SEGURA = 140;
+async function embedQRCode(pdfDoc, urlVerificacao) {
+  try {
+    const { gerarQRCode } = require('../utils/qrCodeGenerator');
+    const dataUrl = await gerarQRCode(urlVerificacao);
+    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+    return await pdfDoc.embedPng(Buffer.from(base64, 'base64'));
+  } catch (err) {
+    console.warn('[pdfService] QR Code nao gerado:', err.message);
+    return null;
+  }
+}
 
 // ══════════════════════════════════════════════════════════════
 //  CERTIFICADO INDIVIDUAL
@@ -48,75 +50,50 @@ const Y_BASE_SEGURA = 140;
 
 async function gerarIndividual(d) {
   const pdfDoc = await PDFDocument.create();
-  const f = await carregarFontes(pdfDoc);
+  const f      = await carregarFontes(pdfDoc);
 
-  const codigoVerificacao = gerarCodigoVerificacao(d);
-  const urlVerificacao = gerarURLVerificacao(codigoVerificacao);
-
-  let qrCodeDataUrl = null;
-  try {
-    qrCodeDataUrl = await gerarQRCode(urlVerificacao);
-  } catch (err) {
-    console.warn('[pdfService] Nao foi possivel gerar QR Code:', err.message);
-  }
+  const codigo  = gerarCodigoVerificacao(d);
+  const url     = gerarURLVerificacao(codigo);
+  const qrImage = await embedQRCode(pdfDoc, url);
 
   const page = pdfDoc.addPage([W, H]);
   await aplicarBackground(page, pdfDoc);
-
   desenharBorda(page);
   await desenharMarcaDagua(page, f, pdfDoc);
+
   const yPosC = await desenharCabecalho(page, f, pdfDoc);
   const yPosT = desenharTitulo(page, f, yPosC);
 
-  // ── CONTEÚDO PRINCIPAL ────────────────────────────────────
-  // Área disponível: entre yPosT e Y_BASE_SEGURA
-  // Distribuímos o conteúdo verticalmente nesse espaço
+  // ── CONTEÚDO ──────────────────────────────────────────────
+  // Área segura: entre yPosT e 210 (acima do rodapé)
+  let y = yPosT - 30;
 
-  const areaDisponivel = yPosT - Y_BASE_SEGURA;
-
-  // Calculamos os blocos de conteúdo e os espaçamos uniformemente
-  // Bloco 1: "Certificamos que" + nome + cargo
-  // Bloco 2: "concluiu..." + curso
-  // Bloco 3: detalhes (carga horária, período, etc.)
-  // Bloco 4: instrutor
-  // Bloco 5: rodapé + QR Code
-
-  // Iniciamos um pouco abaixo do título
-  let y = yPosT - 28;
-
-  // "Certificamos que"
   centro(page, 'Certificamos que', f.italic, 13, y, COR.cinza);
-  y -= 36;
+  y -= 38;
 
-  // Nome do participante — fonte grande
   centro(page, d.nome, f.boldItalic, 32, y, COR.verde);
-  y -= 24;
+  y -= 26;
 
-  // Cargo e matrícula
   if (d.cargo || d.matricula) {
     const cargoStr = [
       d.cargo,
       d.matricula ? `Matricula: ${d.matricula}` : null,
     ].filter(Boolean).join('   —   ');
     centro(page, cargoStr, f.sans, 10, y, COR.cinza);
-    y -= 28;
+    y -= 30;
   } else {
-    y -= 8;
+    y -= 10;
   }
 
-  // "concluiu com aproveitamento o curso"
   centro(page, 'concluiu com aproveitamento o curso', f.regular, 13, y, COR.preto);
-  y -= 32;
+  y -= 34;
 
-  // Nome do curso — destaque
   centro(page, d.curso, f.bold, 22, y, COR.verde);
-  y -= 20;
-
-  // Linha ornamental abaixo do curso
-  linha(page, W / 2 - 160, y, W / 2 + 160, y, COR.cinzaC, 0.6);
   y -= 22;
 
-  // Detalhes em linha única
+  linha(page, W / 2 - 180, y, W / 2 + 180, y, COR.cinzaC, 0.6);
+  y -= 24;
+
   const dets = [
     d.cargaHoraria ? `Carga Horaria: ${d.cargaHoraria}h` : null,
     d.periodo      ? `Periodo: ${d.periodo}`              : null,
@@ -126,40 +103,16 @@ async function gerarIndividual(d) {
 
   if (dets.length > 0) {
     centro(page, dets.join('   ·   '), f.sans, 10, y, COR.cinza);
-    y -= 22;
+    y -= 24;
   }
 
-  // Instrutor
   if (d.instrutor) {
     const instrStr = `Ministrado por ${d.instrutor}${d.instrCargo ? '   —   ' + d.instrCargo : ''}`;
-    centro(page, instrStr, f.italic, 10.5, y, COR.cinza);
+    centro(page, instrStr, f.italic, 11, y, COR.cinza);
   }
 
-  // ── RODAPÉ E QR CODE ──────────────────────────────────────
-  desenharRodape(page, f, d.dataEmissao);
-
-  // Código de verificação
-  page.drawText(`Codigo: ${codigoVerificacao}`, {
-    x: 32, y: 28,
-    font: f.sans, size: 7.5, color: COR.cinza,
-  });
-
-  // QR Code centralizado no rodapé
-  if (qrCodeDataUrl) {
-    try {
-      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-      const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
-      const qrSize = 64;
-      page.drawImage(qrImage, {
-        x: W / 2 - qrSize / 2,
-        y: 20,
-        width: qrSize,
-        height: qrSize,
-      });
-    } catch (err) {
-      console.warn('[pdfService] Erro ao adicionar QR Code:', err.message);
-    }
-  }
+  // ── RODAPÉ ────────────────────────────────────────────────
+  desenharRodape(page, f, d.dataEmissao, codigo, qrImage);
 
   return pdfDoc.save();
 }
@@ -170,17 +123,11 @@ async function gerarIndividual(d) {
 
 async function gerarAnual(d) {
   const pdfDoc = await PDFDocument.create();
-  const f = await carregarFontes(pdfDoc);
+  const f      = await carregarFontes(pdfDoc);
 
-  const codigoVerificacao = gerarCodigoVerificacao(d);
-  const urlVerificacao = gerarURLVerificacao(codigoVerificacao);
-
-  let qrCodeDataUrl = null;
-  try {
-    qrCodeDataUrl = await gerarQRCode(urlVerificacao);
-  } catch (err) {
-    console.warn('[pdfService] Nao foi possivel gerar QR Code:', err.message);
-  }
+  const codigo  = gerarCodigoVerificacao(d);
+  const url     = gerarURLVerificacao(codigo);
+  const qrImage = await embedQRCode(pdfDoc, url);
 
   const totalHoras = (d.cursos || []).reduce((s, c) => s + (parseInt(c.horas) || 0), 0);
 
@@ -189,16 +136,17 @@ async function gerarAnual(d) {
   await aplicarBackground(pgF, pdfDoc);
   desenharBorda(pgF);
   await desenharMarcaDagua(pgF, f, pdfDoc);
+
   const yCF = await desenharCabecalho(pgF, f, pdfDoc);
   const yTF = desenharTitulo(pgF, f, yCF);
 
-  let y = yTF - 28;
+  let y = yTF - 30;
 
   centro(pgF, 'Certificamos que o(a) servidor(a)', f.italic, 13, y, COR.cinza);
-  y -= 36;
+  y -= 38;
 
   centro(pgF, d.nome, f.boldItalic, 32, y, COR.verde);
-  y -= 24;
+  y -= 26;
 
   if (d.cargo || d.matricula) {
     const cargoStr = [
@@ -206,45 +154,24 @@ async function gerarAnual(d) {
       d.matricula ? `Matricula: ${d.matricula}` : null,
     ].filter(Boolean).join('   —   ');
     centro(pgF, cargoStr, f.sans, 10, y, COR.cinza);
-    y -= 28;
+    y -= 30;
   } else {
-    y -= 8;
+    y -= 10;
   }
 
   centro(pgF, 'concluiu com aproveitamento as capacitacoes e formacoes continuadas', f.regular, 12, y, COR.preto);
-  y -= 20;
+  y -= 22;
   centro(pgF, `promovidas pela Secretaria Municipal de Educacao no ${d.periodoTexto},`, f.regular, 12, y, COR.preto);
-  y -= 20;
+  y -= 22;
   centro(pgF, 'totalizando uma carga horaria de:', f.regular, 12, y, COR.preto);
-  y -= 44;
+  y -= 46;
 
   centro(pgF, `${totalHoras} horas`, f.bold, 36, y, COR.verde);
-  y -= 28;
+  y -= 30;
 
   centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
 
-  desenharRodape(pgF, f, d.dataEmissao);
-
-  page.drawText(`Codigo: ${codigoVerificacao}`, {
-    x: 32, y: 28,
-    font: f.sans, size: 7.5, color: COR.cinza,
-  });
-
-  if (qrCodeDataUrl) {
-    try {
-      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-      const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
-      const qrSize = 64;
-      pgF.drawImage(qrImage, {
-        x: W / 2 - qrSize / 2,
-        y: 20,
-        width: qrSize,
-        height: qrSize,
-      });
-    } catch (err) {
-      console.warn('[pdfService] Erro ao adicionar QR Code frente:', err.message);
-    }
-  }
+  desenharRodape(pgF, f, d.dataEmissao, codigo, qrImage);
 
   // ── VERSO ─────────────────────────────────────────────────
   const pgV = pdfDoc.addPage([W, H]);
@@ -324,18 +251,16 @@ async function gerarAnual(d) {
     yV -= ROW_H;
   }
 
-  // Linha de total
+  // Total
   pgV.drawRectangle({
     x: TABLE_X, y: yV - ROW_H + 4,
     width: TABLE_W, height: ROW_H,
     color: COR.verdeBg, borderColor: COR.verde, borderWidth: 0.5,
   });
-
   pgV.drawText('Total de Horas de Formacao:', {
     x: COLS[1].x, y: yV - ROW_H + 7,
     font: f.sansBold, size: 9, color: COR.verde,
   });
-
   const totalStr = `${totalHoras}h`;
   const totalTW  = f.sansBold.widthOfTextAtSize(totalStr, 10);
   pgV.drawText(totalStr, {
@@ -343,36 +268,9 @@ async function gerarAnual(d) {
     font: f.sansBold, size: 10, color: COR.verde,
   });
 
-  yV -= ROW_H + 16;
-
-  // Data e autenticação no verso
-  desenharRodape(pgV, f, d.dataEmissao);
-
-  pgV.drawText(`Codigo: ${codigoVerificacao}`, {
-    x: 32, y: 28,
-    font: f.sans, size: 7.5, color: COR.cinza,
-  });
-
-  if (qrCodeDataUrl) {
-    try {
-      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-      const qrImage = await pdfDoc.embedPng(Buffer.from(base64Data, 'base64'));
-      const qrSize  = 64;
-      pgV.drawImage(qrImage, {
-        x: W / 2 - qrSize / 2,
-        y: 20,
-        width: qrSize,
-        height: qrSize,
-      });
-    } catch (err) {
-      console.warn('[pdfService] Erro ao adicionar QR Code verso:', err.message);
-    }
-  }
+  desenharRodape(pgV, f, d.dataEmissao, codigo, qrImage);
 
   return pdfDoc.save();
 }
 
-module.exports = {
-  gerarIndividual,
-  gerarAnual,
-};
+module.exports = { gerarIndividual, gerarAnual };
