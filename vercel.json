@@ -1,8 +1,6 @@
 {
-  "functions": {
-    "api/gerar-certificado.js": { "memory": 1024, "maxDuration": 10 }
-  },
-  "redirects": [
-    { "source": "/gerar-certificado", "destination": "/api/gerar-certificado" }
+  "rewrites": [
+    { "source": "/verificar/:codigo", "destination": "/verificar.html" },
+    { "source": "/api/(.*)",          "destination": "/api/$1" }
   ]
 }

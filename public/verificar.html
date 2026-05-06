@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificação de Certificado — SMED Vacaria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold:    #B8973A;
+      --navy:    #0D1F3C;
+      --green:   #2E6B4F;
+      --cream:   #FAF8F3;
+      --border:  #DDD8CC;
+      --text:    #2A2A2A;
+      --muted:   #6B6B6B;
+      --radius:  14px;
+    }
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 80px;
+    }
+    .header { text-align: center; margin-bottom: 36px; }
+    .logo-wrap {
+      width: 80px; height: 80px; border-radius: 50%;
+      overflow: hidden; margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(13,31,60,.15);
+    }
+    .logo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 600; color: var(--navy);
+    }
+    .header p { font-size: .78rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-top: 6px; }
+
+    .card {
+      background: #fff; border-radius: var(--radius);
+      box-shadow: 0 8px 40px rgba(13,31,60,.10);
+      width: 100%; max-width: 620px; overflow: hidden;
+    }
+
+    /* Estado: carregando */
+    .state { padding: 48px 40px; text-align: center; }
+    .spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--navy);
+      animation: spin .8s linear infinite; margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state p { color: var(--muted); font-size: .9rem; }
+
+    /* Estado: válido */
+    .valid-banner {
+      background: var(--green); color: #fff;
+      padding: 20px 32px; display: flex; align-items: center; gap: 14px;
+    }
+    .valid-banner .icon { font-size: 1.8rem; }
+    .valid-banner h2 { font-size: 1.1rem; font-weight: 600; }
+    .valid-banner p  { font-size: .8rem; opacity: .85; margin-top: 2px; }
+
+    .cert-body { padding: 32px 40px; }
+    .cert-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem; font-weight: 600; color: var(--gold);
+      letter-spacing: .12em; text-transform: uppercase;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    }
+    .cert-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .field-row.single { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .field .val { font-size: .95rem; color: var(--text); font-weight: 500; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    .code-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--cream); border-radius: 8px; padding: 12px 16px;
+      font-size: .8rem; color: var(--muted);
+    }
+    .code-row strong { color: var(--navy); font-size: .95rem; letter-spacing: .08em; }
+
+    /* Estado: inválido */
+    .invalid-banner {
+      background: #c0392b; color: #fff;
+      padding: 20px 32px; display: flex; align-items: center; gap: 14px;
+    }
+    .invalid-banner .icon { font-size: 1.8rem; }
+    .invalid-banner h2 { font-size: 1.1rem; font-weight: 600; }
+    .invalid-banner p  { font-size: .8rem; opacity: .85; margin-top: 2px; }
+
+    .footer-note { text-align: center; font-size: .72rem; color: var(--muted); margin-top: 24px; }
+
+    @media (max-width: 500px) {
+      .cert-body { padding: 24px 20px; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo-wrap">
+    <img src="/logo_smed.png" alt="Logo SMED">
+  </div>
+  <h1>Verificação de Certificado</h1>
+  <p>Secretaria Municipal de Educação · Vacaria / RS</p>
+</header>
+
+<div class="card" id="card">
+  <!-- Preenchido via JS -->
+  <div class="state" id="state-loading">
+    <div class="spinner"></div>
+    <p>Consultando certificado...</p>
+  </div>
+</div>
+
+<p class="footer-note">
+  Este portal é mantido pela Secretaria Municipal de Educação de Vacaria/RS.<br>
+  Em caso de dúvidas, entre em contato pelo e-mail da secretaria.
+</p>
+
+<script>
+  // Extrai o código da URL: /verificar/XXXX-XXXX
+  function extrairCodigo() {
+    const partes = window.location.pathname.split('/');
+    return partes[partes.length - 1] || '';
+  }
+
+  function fmtData(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso;
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho',
+                   'julho','agosto','setembro','outubro','novembro','dezembro'];
+    return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+  }
+
+  function renderValido(cert, codigo) {
+    const card = document.getElementById('card');
+    const tipo = cert.tipo === 'anual' ? 'Certificado Anual' : 'Certificado Individual';
+
+    let cursosHTML = '';
+    if (cert.tipo === 'anual' && Array.isArray(cert.cursos) && cert.cursos.length > 0) {
+      cursosHTML = `
+        <hr class="divider">
+        <div class="cert-title">Cursos Realizados</div>
+        ${cert.cursos.map((c, i) => `
+          <div class="field-row" style="margin-bottom:12px">
+            <div class="field">
+              <span class="lbl">Curso ${i+1}</span>
+              <span class="val">${c.nome || '—'}</span>
+            </div>
+            <div class="field">
+              <span class="lbl">Carga Horária</span>
+              <span class="val">${c.horas ? c.horas + 'h' : '—'}</span>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    const periodoHTML = cert.tipo === 'individual'
+      ? `<div class="field"><span class="lbl">Período</span><span class="val">${cert.periodo || '—'}</span></div>`
+      : `<div class="field"><span class="lbl">Período de Referência</span><span class="val">${cert.periodoTexto || '—'}</span></div>`;
+
+    card.innerHTML = `
+      <div class="valid-banner">
+        <span class="icon">✓</span>
+        <div>
+          <h2>Certificado Válido</h2>
+          <p>Este documento é autêntico e foi emitido pela SMED Vacaria</p>
+        </div>
+      </div>
+      <div class="cert-body">
+        <div class="cert-title">Dados do Participante</div>
+        <div class="field-row single">
+          <div class="field">
+            <span class="lbl">Nome</span>
+            <span class="val">${cert.nome || '—'}</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <span class="lbl">Cargo / Função</span>
+            <span class="val">${cert.cargo || '—'}</span>
+          </div>
+          <div class="field">
+            <span class="lbl">Matrícula</span>
+            <span class="val">${cert.matricula || '—'}</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div class="cert-title">${tipo}</div>
+
+        ${cert.tipo === 'individual' ? `
+        <div class="field-row single">
+          <div class="field">
+            <span class="lbl">Curso</span>
+            <span class="val">${cert.curso || '—'}</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <span class="lbl">Carga Horária</span>
+            <span class="val">${cert.cargaHoraria ? cert.cargaHoraria + ' horas' : '—'}</span>
+          </div>
+          <div class="field">
+            <span class="lbl">Modalidade</span>
+            <span class="val">${cert.modalidade || '—'}</span>
+          </div>
+        </div>
+        <div class="field-row">
+          ${periodoHTML}
+          <div class="field">
+            <span class="lbl">Local</span>
+            <span class="val">${cert.local || '—'}</span>
+          </div>
+        </div>
+        <div class="field-row single">
+          <div class="field">
+            <span class="lbl">Instrutor</span>
+            <span class="val">${cert.instrutor || '—'}${cert.instrCargo ? ' — ' + cert.instrCargo : ''}</span>
+          </div>
+        </div>
+        ` : `
+        <div class="field-row">
+          ${periodoHTML}
+          <div class="field">
+            <span class="lbl">Total de Horas</span>
+            <span class="val">${(cert.cursos||[]).reduce((s,c)=>s+(parseInt(c.horas)||0),0)} horas</span>
+          </div>
+        </div>
+        `}
+
+        ${cursosHTML}
+
+        <hr class="divider">
+        <div class="field-row">
+          <div class="field">
+            <span class="lbl">Data de Emissão</span>
+            <span class="val">${cert.dataEmissao || '—'}</span>
+          </div>
+          <div class="field">
+            <span class="lbl">Emitido por</span>
+            <span class="val">SMED Vacaria</span>
+          </div>
+        </div>
+
+        <div class="code-row" style="margin-top:16px">
+          <span>Código de verificação</span>
+          <strong>${codigo}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderInvalido(codigo) {
+    const card = document.getElementById('card');
+    card.innerHTML = `
+      <div class="invalid-banner">
+        <span class="icon">✕</span>
+        <div>
+          <h2>Certificado não encontrado</h2>
+          <p>O código <strong>${codigo}</strong> não corresponde a nenhum certificado emitido</p>
+        </div>
+      </div>
+      <div class="cert-body">
+        <p style="color:var(--muted);font-size:.9rem;line-height:1.6">
+          Verifique se o QR Code foi escaneado corretamente ou entre em contato com a
+          Secretaria Municipal de Educação de Vacaria/RS para confirmar a autenticidade
+          do documento.
+        </p>
+      </div>
+    `;
+  }
+
+  async function verificar() {
+    const codigo = extrairCodigo();
+    if (!codigo || codigo === 'verificar') {
+      renderInvalido('(nenhum código informado)');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/verificar-certificado?codigo=${encodeURIComponent(codigo)}`);
+      if (res.ok) {
+        const cert = await res.json();
+        renderValido(cert, codigo);
+      } else {
+        renderInvalido(codigo);
+      }
+    } catch (err) {
+      renderInvalido(codigo);
+    }
+  }
+
+  verificar();
+</script>
+</body>
+</html>

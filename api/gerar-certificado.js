@@ -5,6 +5,7 @@ const { gerarIndividual, gerarAnual } = require('../src/services/pdfService');
 const { validarRequisicaoIndividual, validarRequisicaoAnual } = require('../src/utils/validator');
 const { fmtData, obterDataHoje } = require('../src/utils/formatter');
 const { gerarCodigoVerificacao } = require('../src/utils/verificationCode');
+const { salvarCertificado } = require('../src/services/certificadoStore');
 
 // ══════════════════════════════════════════════════════════════
 //  HANDLER SERVERLESS (Vercel)
@@ -12,12 +13,6 @@ const { gerarCodigoVerificacao } = require('../src/utils/verificationCode');
 // ══════════════════════════════════════════════════════════════
 
 module.exports = async function handler(req, res) {
-  // Verificar variáveis de ambiente
-  const certificatePassword = process.env.CERTIFICATE_PASSWORD;
-  if (!certificatePassword) {
-    console.warn('[gerar-certificado] AVISO: CERTIFICATE_PASSWORD não está definida em .env');
-  }
-
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método não permitido' });
     return;
@@ -29,21 +24,22 @@ module.exports = async function handler(req, res) {
 
     let pdfBytes;
     let nomeArquivo;
-    let codigoVerificacao;
+    let periodo      = '';
+    let periodoTexto = '';
 
     if (b.tipo === 'anual') {
-      // ── VALIDAÇÃO ROBUSTA ──────────────────────────────────────
+      // ── VALIDAÇÃO ─────────────────────────────────────────
       const validacao = validarRequisicaoAnual(b);
       if (!validacao.valido) {
         res.status(400).json({ errors: validacao.errors });
         return;
       }
 
-      // ── GERAÇÃO ANUAL ──────────────────────────────────────
+      // ── PERÍODO ───────────────────────────────────────────
       const anoI = b.periodoInicio ? b.periodoInicio.split('-')[0] : '';
       const anoF = b.periodoFim    ? b.periodoFim.split('-')[0]    : '';
 
-      const periodoTexto = anoI && anoF
+      periodoTexto = anoI && anoF
         ? (anoI === anoF
             ? `exercício de ${anoI}`
             : `período de ${anoI} a ${anoF}`)
@@ -51,6 +47,7 @@ module.exports = async function handler(req, res) {
           ? `exercício de ${anoI}`
           : 'período de referência';
 
+      // ── GERAÇÃO ANUAL ─────────────────────────────────────
       pdfBytes = await gerarAnual({
         nome:         b.nome        || 'Servidor(a)',
         cargo:        b.cargo       || '',
@@ -66,34 +63,35 @@ module.exports = async function handler(req, res) {
       nomeArquivo = `Certificado_Anual_${nomeSlug}_${anoI || 'ref'}.pdf`;
 
     } else {
-      // ── VALIDAÇÃO ROBUSTA ──────────────────────────────────────
+      // ── VALIDAÇÃO ─────────────────────────────────────────
       const validacao = validarRequisicaoIndividual(b);
       if (!validacao.valido) {
         res.status(400).json({ errors: validacao.errors });
         return;
       }
 
-      // ── GERAÇÃO INDIVIDUAL ─────────────────────────────────
-      const periodo = b.dataInicio && b.dataFim
+      // ── PERÍODO ───────────────────────────────────────────
+      periodo = b.dataInicio && b.dataFim
         ? `${fmtData(b.dataInicio).slice(0, 5)} a ${fmtData(b.dataFim)}`
         : b.dataInicio
           ? `a partir de ${fmtData(b.dataInicio)}`
           : '';
 
+      // ── GERAÇÃO INDIVIDUAL ────────────────────────────────
       pdfBytes = await gerarIndividual({
-        nome:        b.nome        || 'Servidor(a)',
-        cargo:       b.cargo       || '',
-        matricula:   b.matricula   || '',
-        curso:       b.curso       || 'Curso',
+        nome:         b.nome         || 'Servidor(a)',
+        cargo:        b.cargo        || '',
+        matricula:    b.matricula    || '',
+        curso:        b.curso        || 'Curso',
         cargaHoraria: b.cargaHoraria || '',
-        modalidade:  b.modalidade  || 'Presencial',
+        modalidade:   b.modalidade   || 'Presencial',
         periodo,
-        local:       b.local       || '',
-        instrutor:   b.instrutor   || '',
-        instrCargo:  b.instrCargo  || '',
-        secretario:  b.secretario  || 'Secretário(a) Municipal de Educação',
-        prefeito:    b.prefeito    || 'Prefeito(a) Municipal',
-        dataEmissao: hoje,
+        local:        b.local        || '',
+        instrutor:    b.instrutor    || '',
+        instrCargo:   b.instrCargo   || '',
+        secretario:   b.secretario   || 'Secretário(a) Municipal de Educação',
+        prefeito:     b.prefeito     || 'Prefeito(a) Municipal',
+        dataEmissao:  hoje,
       });
 
       const nomeSlug  = (b.nome  || 'servidor').replace(/\s+/g, '_');
@@ -101,14 +99,32 @@ module.exports = async function handler(req, res) {
       nomeArquivo = `Certificado_${nomeSlug}_${cursoSlug}.pdf`;
     }
 
-    // Gera código de verificação
-    codigoVerificacao = gerarCodigoVerificacao({
-      nome: b.nome,
-      cargo: b.cargo,
+    // ── CÓDIGO DE VERIFICAÇÃO ─────────────────────────────
+    const codigoVerificacao = gerarCodigoVerificacao({
+      nome:      b.nome,
+      cargo:     b.cargo,
       matricula: b.matricula,
     });
 
-    // ── RESPOSTA ───────────────────────────────────────────────
+    // ── SALVA NO BANCO PARA VERIFICAÇÃO VIA QR CODE ───────
+    await salvarCertificado(codigoVerificacao, {
+      tipo:         b.tipo         || 'individual',
+      nome:         b.nome         || '',
+      cargo:        b.cargo        || '',
+      matricula:    b.matricula    || '',
+      curso:        b.curso        || '',
+      cargaHoraria: b.cargaHoraria || '',
+      modalidade:   b.modalidade   || '',
+      local:        b.local        || '',
+      instrutor:    b.instrutor    || '',
+      instrCargo:   b.instrCargo   || '',
+      cursos:       b.cursos       || [],
+      periodo,
+      periodoTexto,
+      dataEmissao:  hoje,
+    });
+
+    // ── RESPOSTA ──────────────────────────────────────────
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     res.setHeader('Content-Length', pdfBytes.length);
