@@ -1,8 +1,6 @@
 const { COR, W, H } = require('../config/constants');
 const { linha } = require('../utils/drawing');
 const { centro } = require('../utils/text');
-const path = require('path');
-const fs = require('fs');
 
 // ══════════════════════════════════════════════════════════════
 //  ELEMENTOS VISUAIS REUTILIZÁVEIS
@@ -28,24 +26,12 @@ function desenharBorda(page) {
   }
 }
 
+// Marca d'água removida — background já contém os logos necessários
 async function desenharMarcaDagua(page, f, pdfDoc) {
-  try {
-    const logoPath = path.join(process.cwd(), 'assets', 'logo_smed.png');
-    const logoBytes = fs.readFileSync(logoPath);
-    const logoImage = await pdfDoc.embedPng(logoBytes);
-    const size = 200;
-    page.drawImage(logoImage, {
-      x: W / 2 - size / 2,
-      y: H / 2 - size / 2,
-      width: size,
-      height: size,
-      opacity: 0.04,
-    });
-  } catch (err) {
-    console.warn('[visualService] Marca dagua ignorada:', err.message);
-  }
+  // Intencionalmente vazio
 }
 
+// Cabeçalho sem logo — background já tem os logos
 async function desenharCabecalho(page, f, pdfDoc) {
   const y = H - 52;
   linha(page, 56, y + 14, W - 56, y + 14, COR.dourado, 0.4);
@@ -53,22 +39,6 @@ async function desenharCabecalho(page, f, pdfDoc) {
   centro(page, 'SECRETARIA MUNICIPAL DE EDUCAÇÃO', f.sansBold, 11, y - 15, COR.verde);
   centro(page, 'Vacaria — Rio Grande do Sul', f.sans, 8, y - 28, COR.cinza);
   linha(page, 56, y - 38, W - 56, y - 38, COR.dourado, 0.4);
-
-  try {
-    const logoPath = path.join(process.cwd(), 'assets', 'logo_smed.png');
-    const logoBytes = fs.readFileSync(logoPath);
-    const logoImage = await pdfDoc.embedPng(logoBytes);
-    const logoSize = 52;
-    page.drawImage(logoImage, {
-      x: 56,
-      y: y - 26,
-      width: logoSize,
-      height: logoSize,
-    });
-  } catch (err) {
-    console.warn('[visualService] Logo do cabecalho ignorado:', err.message);
-  }
-
   return y - 38;
 }
 
@@ -83,54 +53,37 @@ function desenharTitulo(page, f, yBase) {
 }
 
 /**
- * Desenha rodapé com data + bloco QR Code no canto direito.
- * O background tem logos de y=0 até ~130px.
- * O rodapé fica entre y=132 e y=200 — zona livre acima dos logos.
- *
- * @param {PDFPage} page
- * @param {object}  f           - fontes
- * @param {string}  dataEmissao - data formatada
- * @param {string}  codigo      - código de verificação
- * @param {*}       qrImage     - imagem QR já embedada (ou null)
+ * Rodapé com data, código e QR Code no canto direito.
+ * Fica entre y=200 e y=132 — zona livre acima dos logos do background.
  */
 function desenharRodape(page, f, dataEmissao, codigo, qrImage) {
-  // Linha separadora — fica acima dos logos do background
   const Y_SEP = 200;
   linha(page, 56, Y_SEP, W - 56, Y_SEP, COR.dourado, 0.35);
 
-  // Lado esquerdo: data de emissão
+  // Esquerda: data e código
   page.drawText(`Vacaria, ${dataEmissao}`, {
-    x: 60,
-    y: Y_SEP - 18,
-    font: f.sans,
-    size: 9,
-    color: COR.cinza,
+    x: 60, y: Y_SEP - 18,
+    font: f.sans, size: 9, color: COR.cinza,
   });
-
   page.drawText(`Codigo de verificacao: ${codigo}`, {
-    x: 60,
-    y: Y_SEP - 30,
-    font: f.sans,
-    size: 7.5,
-    color: COR.cinza,
+    x: 60, y: Y_SEP - 30,
+    font: f.sans, size: 7.5, color: COR.cinza,
   });
 
-  // Lado direito: QR Code + texto de autenticidade
+  // Direita: QR Code
   const QR_SIZE = 52;
-  const QR_X    = W - QR_SIZE - 56;  // alinhado com a borda interna
+  const QR_X    = W - QR_SIZE - 56;
   const QR_Y    = Y_SEP - QR_SIZE - 4;
 
   if (qrImage) {
     page.drawImage(qrImage, {
-      x: QR_X,
-      y: QR_Y,
-      width:  QR_SIZE,
-      height: QR_SIZE,
+      x: QR_X, y: QR_Y,
+      width: QR_SIZE, height: QR_SIZE,
     });
   }
 
   // Texto ao lado do QR Code
-  const TX = QR_X - 160;
+  const TX = QR_X - 165;
   const TY = QR_Y + QR_SIZE - 10;
   page.drawText('Autenticacao digital', {
     x: TX, y: TY,

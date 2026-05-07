@@ -4,12 +4,11 @@ require('dotenv').config();
 const { gerarIndividual, gerarAnual } = require('../src/services/pdfService');
 const { validarRequisicaoIndividual, validarRequisicaoAnual } = require('../src/utils/validator');
 const { fmtData, obterDataHoje } = require('../src/utils/formatter');
-const { gerarCodigoVerificacao } = require('../src/utils/verificationCode');
+const { gerarCodigoVerificacao, gerarURLVerificacao } = require('../src/utils/verificationCode');
 const { salvarCertificado } = require('../src/services/certificadoStore');
 
 // ══════════════════════════════════════════════════════════════
 //  HANDLER SERVERLESS (Vercel)
-//  Controller enxuto que orquestra os serviços
 // ══════════════════════════════════════════════════════════════
 
 module.exports = async function handler(req, res) {
@@ -27,6 +26,14 @@ module.exports = async function handler(req, res) {
     let periodo      = '';
     let periodoTexto = '';
 
+    // ── GERA CÓDIGO ÚNICO AQUI — usado tanto no PDF quanto no banco ──
+    const codigoVerificacao = gerarCodigoVerificacao({
+      nome:      b.nome,
+      cargo:     b.cargo,
+      matricula: b.matricula,
+    });
+    const urlVerificacao = gerarURLVerificacao(codigoVerificacao);
+
     if (b.tipo === 'anual') {
       // ── VALIDAÇÃO ─────────────────────────────────────────
       const validacao = validarRequisicaoAnual(b);
@@ -41,22 +48,22 @@ module.exports = async function handler(req, res) {
 
       periodoTexto = anoI && anoF
         ? (anoI === anoF
-            ? `exercício de ${anoI}`
-            : `período de ${anoI} a ${anoF}`)
+            ? `exercicio de ${anoI}`
+            : `periodo de ${anoI} a ${anoF}`)
         : anoI
-          ? `exercício de ${anoI}`
-          : 'período de referência';
+          ? `exercicio de ${anoI}`
+          : 'periodo de referencia';
 
-      // ── GERAÇÃO ANUAL ─────────────────────────────────────
+      // ── GERAÇÃO ANUAL — passa código e URL já gerados ─────
       pdfBytes = await gerarAnual({
-        nome:         b.nome        || 'Servidor(a)',
-        cargo:        b.cargo       || '',
-        matricula:    b.matricula   || '',
+        nome:              b.nome        || 'Servidor(a)',
+        cargo:             b.cargo       || '',
+        matricula:         b.matricula   || '',
         periodoTexto,
-        cursos:       Array.isArray(b.cursos) ? b.cursos : [],
-        secretario:   b.secretario  || 'Secretário(a) Municipal de Educação',
-        prefeito:     b.prefeito    || 'Prefeito(a) Municipal',
-        dataEmissao:  hoje,
+        cursos:            Array.isArray(b.cursos) ? b.cursos : [],
+        dataEmissao:       hoje,
+        codigoVerificacao,
+        urlVerificacao,
       });
 
       const nomeSlug = (b.nome || 'servidor').replace(/\s+/g, '_');
@@ -70,28 +77,28 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      // ── PERÍODO ───────────────────────────────────────────
-      periodo = b.dataInicio && b.dataFim
-        ? `${fmtData(b.dataInicio).slice(0, 5)} a ${fmtData(b.dataFim)}`
-        : b.dataInicio
-          ? `a partir de ${fmtData(b.dataInicio)}`
-          : '';
+      // ── PERÍODO — corrigido para usar fmtData completo ────
+      if (b.dataInicio && b.dataFim) {
+        periodo = `${fmtData(b.dataInicio)} a ${fmtData(b.dataFim)}`;
+      } else if (b.dataInicio) {
+        periodo = `a partir de ${fmtData(b.dataInicio)}`;
+      }
 
-      // ── GERAÇÃO INDIVIDUAL ────────────────────────────────
+      // ── GERAÇÃO INDIVIDUAL — passa código e URL já gerados ─
       pdfBytes = await gerarIndividual({
-        nome:         b.nome         || 'Servidor(a)',
-        cargo:        b.cargo        || '',
-        matricula:    b.matricula    || '',
-        curso:        b.curso        || 'Curso',
-        cargaHoraria: b.cargaHoraria || '',
-        modalidade:   b.modalidade   || 'Presencial',
+        nome:              b.nome         || 'Servidor(a)',
+        cargo:             b.cargo        || '',
+        matricula:         b.matricula    || '',
+        curso:             b.curso        || 'Curso',
+        cargaHoraria:      b.cargaHoraria || '',
+        modalidade:        b.modalidade   || 'Presencial',
         periodo,
-        local:        b.local        || '',
-        instrutor:    b.instrutor    || '',
-        instrCargo:   b.instrCargo   || '',
-        secretario:   b.secretario   || 'Secretário(a) Municipal de Educação',
-        prefeito:     b.prefeito     || 'Prefeito(a) Municipal',
-        dataEmissao:  hoje,
+        local:             b.local        || '',
+        instrutor:         b.instrutor    || '',
+        instrCargo:        b.instrCargo   || '',
+        dataEmissao:       hoje,
+        codigoVerificacao,
+        urlVerificacao,
       });
 
       const nomeSlug  = (b.nome  || 'servidor').replace(/\s+/g, '_');
@@ -99,14 +106,7 @@ module.exports = async function handler(req, res) {
       nomeArquivo = `Certificado_${nomeSlug}_${cursoSlug}.pdf`;
     }
 
-    // ── CÓDIGO DE VERIFICAÇÃO ─────────────────────────────
-    const codigoVerificacao = gerarCodigoVerificacao({
-      nome:      b.nome,
-      cargo:     b.cargo,
-      matricula: b.matricula,
-    });
-
-    // ── SALVA NO BANCO PARA VERIFICAÇÃO VIA QR CODE ───────
+    // ── SALVA NO BANCO ────────────────────────────────────────
     await salvarCertificado(codigoVerificacao, {
       tipo:         b.tipo         || 'individual',
       nome:         b.nome         || '',
@@ -124,7 +124,7 @@ module.exports = async function handler(req, res) {
       dataEmissao:  hoje,
     });
 
-    // ── RESPOSTA ──────────────────────────────────────────
+    // ── RESPOSTA ──────────────────────────────────────────────
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     res.setHeader('Content-Length', pdfBytes.length);

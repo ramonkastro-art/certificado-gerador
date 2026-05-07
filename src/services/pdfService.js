@@ -13,7 +13,6 @@ const {
 const { centro, truncar } = require('../utils/text');
 const { linha } = require('../utils/drawing');
 const { fmtCurta } = require('../utils/formatter');
-const { gerarCodigoVerificacao, gerarURLVerificacao } = require('../utils/verificationCode');
 const { gerarQRCode } = require('../utils/qrCodeGenerator');
 
 // ══════════════════════════════════════════════════════════════
@@ -32,11 +31,11 @@ async function aplicarBackground(page, pdfDoc) {
   }
 }
 
+// Gera e embeda o QR Code a partir da URL recebida
 async function embedQRCode(pdfDoc, urlVerificacao) {
   try {
-    const { gerarQRCode } = require('../utils/qrCodeGenerator');
     const dataUrl = await gerarQRCode(urlVerificacao);
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+    const base64  = dataUrl.replace(/^data:image\/png;base64,/, '');
     return await pdfDoc.embedPng(Buffer.from(base64, 'base64'));
   } catch (err) {
     console.warn('[pdfService] QR Code nao gerado:', err.message);
@@ -46,15 +45,15 @@ async function embedQRCode(pdfDoc, urlVerificacao) {
 
 // ══════════════════════════════════════════════════════════════
 //  CERTIFICADO INDIVIDUAL
+//  Recebe codigoVerificacao e urlVerificacao já gerados
 // ══════════════════════════════════════════════════════════════
 
 async function gerarIndividual(d) {
   const pdfDoc = await PDFDocument.create();
   const f      = await carregarFontes(pdfDoc);
 
-  const codigo  = gerarCodigoVerificacao(d);
-  const url     = gerarURLVerificacao(codigo);
-  const qrImage = await embedQRCode(pdfDoc, url);
+  // Usa o código e URL recebidos — NÃO gera novos aqui
+  const qrImage = await embedQRCode(pdfDoc, d.urlVerificacao);
 
   const page = pdfDoc.addPage([W, H]);
   await aplicarBackground(page, pdfDoc);
@@ -64,8 +63,6 @@ async function gerarIndividual(d) {
   const yPosC = await desenharCabecalho(page, f, pdfDoc);
   const yPosT = desenharTitulo(page, f, yPosC);
 
-  // ── CONTEÚDO ──────────────────────────────────────────────
-  // Área segura: entre yPosT e 210 (acima do rodapé)
   let y = yPosT - 30;
 
   centro(page, 'Certificamos que', f.italic, 13, y, COR.cinza);
@@ -111,23 +108,21 @@ async function gerarIndividual(d) {
     centro(page, instrStr, f.italic, 11, y, COR.cinza);
   }
 
-  // ── RODAPÉ ────────────────────────────────────────────────
-  desenharRodape(page, f, d.dataEmissao, codigo, qrImage);
+  desenharRodape(page, f, d.dataEmissao, d.codigoVerificacao, qrImage);
 
   return pdfDoc.save();
 }
 
 // ══════════════════════════════════════════════════════════════
 //  CERTIFICADO ANUAL (frente + verso)
+//  Recebe codigoVerificacao e urlVerificacao já gerados
 // ══════════════════════════════════════════════════════════════
 
 async function gerarAnual(d) {
   const pdfDoc = await PDFDocument.create();
   const f      = await carregarFontes(pdfDoc);
 
-  const codigo  = gerarCodigoVerificacao(d);
-  const url     = gerarURLVerificacao(codigo);
-  const qrImage = await embedQRCode(pdfDoc, url);
+  const qrImage = await embedQRCode(pdfDoc, d.urlVerificacao);
 
   const totalHoras = (d.cursos || []).reduce((s, c) => s + (parseInt(c.horas) || 0), 0);
 
@@ -171,7 +166,7 @@ async function gerarAnual(d) {
 
   centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
 
-  desenharRodape(pgF, f, d.dataEmissao, codigo, qrImage);
+  desenharRodape(pgF, f, d.dataEmissao, d.codigoVerificacao, qrImage);
 
   // ── VERSO ─────────────────────────────────────────────────
   const pgV = pdfDoc.addPage([W, H]);
@@ -268,7 +263,7 @@ async function gerarAnual(d) {
     font: f.sansBold, size: 10, color: COR.verde,
   });
 
-  desenharRodape(pgV, f, d.dataEmissao, codigo, qrImage);
+  desenharRodape(pgV, f, d.dataEmissao, d.codigoVerificacao, qrImage);
 
   return pdfDoc.save();
 }
