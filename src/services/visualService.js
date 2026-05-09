@@ -69,7 +69,7 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
     x: 60, y: Y_SEP - 16,
     font: f.sansBold, size: 8, color: COR.preto,
   });
-  page.drawText('Prefeito(a) Municipal de Vacaria/RS', {
+  page.drawText('Prefeito Municipal de Vacaria/RS', {
     x: 60, y: Y_SEP - 27,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
@@ -83,7 +83,7 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
     x: 60, y: Y_SEP - 42,
     font: f.sansBold, size: 8, color: COR.preto,
   });
-  page.drawText('Secretaria Municipal de Educacao', {
+  page.drawText('Secretária Municipal de Educação', {
     x: 60, y: Y_SEP - 53,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
@@ -102,11 +102,11 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
 
   const TX = QR_X - 168;
   const TY = QR_Y + QR_SIZE - 10;
-  page.drawText('Autenticacao digital', {
+  page.drawText('Autenticação digital', {
     x: TX, y: TY,
     font: f.sansBold, size: 8, color: COR.verde,
   });
-  page.drawText('Documento com validade juridica.', {
+  page.drawText('Documento com validade jurídica.', {
     x: TX, y: TY - 13,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
