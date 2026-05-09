@@ -369,7 +369,7 @@
       </form>
     </div>
   </div>
-  
+
   <p class="footer-note">
     Certificado assinado digitalmente com <strong>certificado ICP-Brasil</strong>.
   </p>
@@ -814,81 +814,104 @@ function previewCSV(event) {
 /**
  * Processa certificados em lote (com delay entre requisições)
  */
+/**
+ * Converte data de qualquer formato para YYYY-MM-DD (ISO)
+ * Aceita: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+ */
+function converterData(data) {
+  if (!data || data.trim() === '') return '';
+  const d = data.trim();
+  // Já está em ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // DD/MM/YYYY
+  const m1 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2]}-${m1[1]}`;
+  // DD-MM-YYYY
+  const m2 = d.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m2) return `${m2[3]}-${m2[2]}-${m2[1]}`;
+  return d;
+}
+
 async function processBatchCertificates() {
   if (!window.batchData || window.batchData.length === 0) {
     showMessage('Carregue um arquivo CSV primeiro.');
     return;
   }
-  
+
   const btn = document.getElementById('batch-btn');
   btn.classList.add('loading');
-  
+
   try {
-    const tipo = document.getElementById('tipo-hidden').value;
+    const tipo       = document.getElementById('tipo-hidden').value;
     const secretario = document.getElementById('secretario').value.trim();
-    const prefeito = document.getElementById('prefeito').value.trim();
-    
+    const prefeito   = document.getElementById('prefeito').value.trim();
+
     let processed = 0;
-    const failed = [];
-    
+    const failed  = [];
+
     for (const row of window.batchData) {
       try {
         const payload = {
           tipo,
           nome: row.nome || 'Servidor(a)',
-          ...(row.cargo && { cargo: row.cargo }),
+          ...(row.cargo     && { cargo:     row.cargo }),
           ...(row.matricula && { matricula: row.matricula }),
-          ...(secretario && { secretario }),
-          ...(prefeito && { prefeito }),
+          ...(secretario    && { secretario }),
+          ...(prefeito      && { prefeito }),
         };
-        
+
         if (tipo === 'individual') {
-          payload.curso = row.curso || 'Curso';
-          payload.cargaHoraria = row.cargaHoraria || '0';
-          payload.dataInicio = row.dataInicio || '';
-          if (row.dataFim) payload.dataFim = row.dataFim;
-          payload.instrutor = row.instrutor || '';
-          payload.local = row.local || '';
+          payload.curso        = row.curso        || 'Curso';
+          // FIX: cargaHoraria vazia causava 400 — usa '1' como mínimo seguro
+          payload.cargaHoraria = row.cargaHoraria && row.cargaHoraria !== '' ? row.cargaHoraria : '1';
+          // FIX: converte datas do formato brasileiro para ISO
+          payload.dataInicio   = converterData(row.dataInicio);
+          if (row.dataFim)    payload.dataFim    = converterData(row.dataFim);
+          payload.instrutor    = row.instrutor   || '';
+          payload.local        = row.local       || '';
           if (row.instrCargo) payload.instrCargo = row.instrCargo;
           if (row.modalidade) payload.modalidade = row.modalidade;
         } else if (tipo === 'anual') {
-          if (row.periodoInicio) payload.periodoInicio = row.periodoInicio;
-          if (row.periodoFim) payload.periodoFim = row.periodoFim;
+          if (row.periodoInicio) payload.periodoInicio = converterData(row.periodoInicio);
+          if (row.periodoFim)    payload.periodoFim    = converterData(row.periodoFim);
           payload.cursos = [];
         }
-        
+
         const response = await fetch('/api/gerar-certificado', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `certificado_${row.nome.replace(/\s+/g, '_')}.pdf`;
+        const url  = window.URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        // FIX: garante que row.nome existe antes de chamar replace
+        a.download = `certificado_${(row.nome || 'servidor').replace(/\s+/g, '_')}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-        
+
         processed++;
-        
-        // Delay entre requisições
-        await new Promise(r => setTimeout(r, 500));
+
+        // Delay entre requisições para não sobrecarregar
+        await new Promise(r => setTimeout(r, 600));
+
       } catch (err) {
         failed.push(row.nome || '(sem nome)');
       }
     }
-    
+
     let msg = `✓ ${processed} certificado(s) gerado(s) com sucesso!`;
     if (failed.length > 0) {
       msg += ` (${failed.length} falha(s): ${failed.join(', ')})`;
     }
     showMessage(msg, failed.length > 0);
+
   } catch (error) {
     console.error('Erro:', error);
     showMessage(`✗ Erro ao processar lote: ${error.message}`);
