@@ -832,45 +832,130 @@ function converterData(data) {
   return d;
 }
 
+/**
+ * Converte data de qualquer formato para YYYY-MM-DD (ISO)
+ * Aceita: DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY, DD-MM-YY, YYYY-MM-DD
+ */
+function converterData(data) {
+  if (!data || data.trim() === '') return '';
+  const d = data.trim();
+
+  // Já está em ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+
+  // DD/MM/YYYY ou DD/MM/YY
+  const m1 = d.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+  if (m1) {
+    const ano = m1[3].length === 2 ? `20${m1[3]}` : m1[3];
+    return `${ano}-${m1[2]}-${m1[1]}`;
+  }
+
+  // DD-MM-YYYY ou DD-MM-YY
+  const m2 = d.match(/^(\d{2})-(\d{2})-(\d{2,4})$/);
+  if (m2) {
+    const ano = m2[3].length === 2 ? `20${m2[3]}` : m2[3];
+    return `${ano}-${m2[2]}-${m2[1]}`;
+  }
+
+  return d; // retorna como está se não reconhecer
+}
+
+/**
+ * Sanitiza texto removendo caracteres especiais que podem quebrar o PDF
+ * Substitui travessões e outros Unicode problemáticos por equivalentes simples
+ */
+function sanitizarTexto(texto) {
+  if (!texto) return '';
+  return texto
+    .replace(/[–—]/g, '-')   // travessão médio/longo → hífen
+    .replace(/[""]/g, '"')   // aspas curvas → retas
+    .replace(/['']/g, "'")   // apóstrofos curvos → retos
+    .trim();
+}
+
+/**
+ * Valida uma linha do CSV e retorna lista de erros encontrados
+ */
+function validarLinha(row, idx) {
+  const erros = [];
+  const num   = idx + 1;
+
+  if (!row.nome || row.nome.trim() === '') {
+    erros.push(`Linha ${num}: campo "nome" está vazio`);
+  }
+  if (!row.curso || row.curso.trim() === '') {
+    erros.push(`Linha ${num}: campo "curso" está vazio`);
+  }
+  if (!row.cargaHoraria || row.cargaHoraria.trim() === '' || isNaN(parseInt(row.cargaHoraria))) {
+    erros.push(`Linha ${num}: campo "cargaHoraria" inválido (${row.cargaHoraria || 'vazio'})`);
+  }
+  if (!row.dataInicio || row.dataInicio.trim() === '') {
+    erros.push(`Linha ${num}: campo "dataInicio" está vazio`);
+  } else {
+    const convertida = converterData(row.dataInicio);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(convertida)) {
+      erros.push(`Linha ${num}: data "${row.dataInicio}" não reconhecida — use DD/MM/AAAA`);
+    }
+  }
+
+  return erros;
+}
+
 async function processBatchCertificates() {
   if (!window.batchData || window.batchData.length === 0) {
     showMessage('Carregue um arquivo CSV primeiro.');
     return;
   }
 
-  const btn = document.getElementById('batch-btn');
+  // ── VALIDAÇÃO ANTECIPADA ───────────────────────────────────
+  const tipo = document.getElementById('tipo-hidden').value;
+
+  if (tipo === 'individual') {
+    const todosErros = [];
+    window.batchData.forEach((row, idx) => {
+      const erros = validarLinha(row, idx);
+      todosErros.push(...erros);
+    });
+
+    if (todosErros.length > 0) {
+      showMessage(
+        '✗ Erros encontrados no CSV:\n' + todosErros.slice(0, 5).join('\n') +
+        (todosErros.length > 5 ? `\n...e mais ${todosErros.length - 5} erro(s)` : '')
+      );
+      return;
+    }
+  }
+
+  const btn        = document.getElementById('batch-btn');
+  const secretario = document.getElementById('secretario').value.trim();
+  const prefeito   = document.getElementById('prefeito').value.trim();
   btn.classList.add('loading');
 
+  let processed = 0;
+  const failed  = [];
+
   try {
-    const tipo       = document.getElementById('tipo-hidden').value;
-    const secretario = document.getElementById('secretario').value.trim();
-    const prefeito   = document.getElementById('prefeito').value.trim();
-
-    let processed = 0;
-    const failed  = [];
-
     for (const row of window.batchData) {
       try {
         const payload = {
           tipo,
-          nome: row.nome || 'Servidor(a)',
-          ...(row.cargo     && { cargo:     row.cargo }),
-          ...(row.matricula && { matricula: row.matricula }),
+          nome:      sanitizarTexto(row.nome) || 'Servidor(a)',
+          ...(row.cargo     && { cargo:     sanitizarTexto(row.cargo) }),
+          ...(row.matricula && { matricula: row.matricula.trim() }),
           ...(secretario    && { secretario }),
           ...(prefeito      && { prefeito }),
         };
 
         if (tipo === 'individual') {
-          payload.curso        = row.curso        || 'Curso';
-          // FIX: cargaHoraria vazia causava 400 — usa '1' como mínimo seguro
-          payload.cargaHoraria = row.cargaHoraria && row.cargaHoraria !== '' ? row.cargaHoraria : '1';
-          // FIX: converte datas do formato brasileiro para ISO
+          payload.curso        = sanitizarTexto(row.curso) || 'Curso';
+          payload.cargaHoraria = row.cargaHoraria.trim();
           payload.dataInicio   = converterData(row.dataInicio);
-          if (row.dataFim)    payload.dataFim    = converterData(row.dataFim);
-          payload.instrutor    = row.instrutor   || '';
-          payload.local        = row.local       || '';
-          if (row.instrCargo) payload.instrCargo = row.instrCargo;
-          if (row.modalidade) payload.modalidade = row.modalidade;
+          if (row.dataFim && row.dataFim.trim())
+            payload.dataFim    = converterData(row.dataFim);
+          payload.instrutor    = sanitizarTexto(row.instrutor)  || '';
+          payload.local        = sanitizarTexto(row.local)      || '';
+          if (row.instrCargo)  payload.instrCargo  = sanitizarTexto(row.instrCargo);
+          if (row.modalidade)  payload.modalidade  = sanitizarTexto(row.modalidade);
         } else if (tipo === 'anual') {
           if (row.periodoInicio) payload.periodoInicio = converterData(row.periodoInicio);
           if (row.periodoFim)    payload.periodoFim    = converterData(row.periodoFim);
@@ -878,39 +963,49 @@ async function processBatchCertificates() {
         }
 
         const response = await fetch('/api/gerar-certificado', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body:    JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          // Tenta extrair mensagem de erro do backend
+          let detalhe = `HTTP ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData.errors) {
+              detalhe = errData.errors.map(e => e.message || e).join(', ');
+            } else if (errData.error) {
+              detalhe = errData.error;
+            }
+          } catch (_) {}
+          throw new Error(detalhe);
+        }
 
         const blob = await response.blob();
         const url  = window.URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        // FIX: garante que row.nome existe antes de chamar replace
-        a.download = `certificado_${(row.nome || 'servidor').replace(/\s+/g, '_')}.pdf`;
+        a.download = `certificado_${(payload.nome).replace(/\s+/g, '_')}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
 
         processed++;
-
-        // Delay entre requisições para não sobrecarregar
         await new Promise(r => setTimeout(r, 600));
 
       } catch (err) {
-        failed.push(row.nome || '(sem nome)');
+        failed.push(`${row.nome || '(sem nome)'}: ${err.message}`);
       }
     }
 
-    let msg = `✓ ${processed} certificado(s) gerado(s) com sucesso!`;
-    if (failed.length > 0) {
-      msg += ` (${failed.length} falha(s): ${failed.join(', ')})`;
+    if (failed.length === 0) {
+      showMessage(`✓ ${processed} certificado(s) gerado(s) com sucesso!`, false);
+    } else {
+      const msg = `✓ ${processed} gerado(s). Falhas:\n${failed.join('\n')}`;
+      showMessage(msg, true);
     }
-    showMessage(msg, failed.length > 0);
 
   } catch (error) {
     console.error('Erro:', error);
