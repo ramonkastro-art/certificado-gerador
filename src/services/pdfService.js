@@ -31,7 +31,6 @@ async function aplicarBackground(page, pdfDoc) {
   }
 }
 
-// Gera e embeda o QR Code a partir da URL recebida
 async function embedQRCode(pdfDoc, urlVerificacao) {
   try {
     const dataUrl = await gerarQRCode(urlVerificacao);
@@ -45,14 +44,12 @@ async function embedQRCode(pdfDoc, urlVerificacao) {
 
 // ══════════════════════════════════════════════════════════════
 //  CERTIFICADO INDIVIDUAL
-//  Recebe codigoVerificacao e urlVerificacao já gerados
 // ══════════════════════════════════════════════════════════════
 
 async function gerarIndividual(d) {
   const pdfDoc = await PDFDocument.create();
   const f      = await carregarFontes(pdfDoc);
 
-  // Usa o código e URL recebidos — NÃO gera novos aqui
   const qrImage = await embedQRCode(pdfDoc, d.urlVerificacao);
 
   const page = pdfDoc.addPage([W, H]);
@@ -108,14 +105,13 @@ async function gerarIndividual(d) {
     centro(page, instrStr, f.italic, 11, y, COR.cinza);
   }
 
-  desenharRodape(page, f, d.dataEmissao, d.codigoVerificacao, qrImage);
+  desenharRodape(page, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
   return pdfDoc.save();
 }
 
 // ══════════════════════════════════════════════════════════════
 //  CERTIFICADO ANUAL (frente + verso)
-//  Recebe codigoVerificacao e urlVerificacao já gerados
 // ══════════════════════════════════════════════════════════════
 
 async function gerarAnual(d) {
@@ -166,7 +162,7 @@ async function gerarAnual(d) {
 
   centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
 
-  desenharRodape(pgF, f, d.dataEmissao, d.codigoVerificacao, qrImage);
+  desenharRodape(pgF, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
   // ── VERSO ─────────────────────────────────────────────────
   const pgV = pdfDoc.addPage([W, H]);
@@ -246,7 +242,6 @@ async function gerarAnual(d) {
     yV -= ROW_H;
   }
 
-  // Total
   pgV.drawRectangle({
     x: TABLE_X, y: yV - ROW_H + 4,
     width: TABLE_W, height: ROW_H,
@@ -263,7 +258,7 @@ async function gerarAnual(d) {
     font: f.sansBold, size: 10, color: COR.verde,
   });
 
-  desenharRodape(pgV, f, d.dataEmissao, d.codigoVerificacao, qrImage);
+  desenharRodape(pgV, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
   return pdfDoc.save();
 }

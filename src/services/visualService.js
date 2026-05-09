@@ -1,6 +1,6 @@
 const { COR, W, H } = require('../config/constants');
 const { linha } = require('../utils/drawing');
-const { centro } = require('../utils/text');
+const { centro, centroBloco } = require('../utils/text');
 
 // ══════════════════════════════════════════════════════════════
 //  ELEMENTOS VISUAIS REUTILIZÁVEIS
@@ -53,27 +53,45 @@ function desenharTitulo(page, f, yBase) {
 }
 
 /**
- * Rodapé com data, código e QR Code no canto direito.
- * Fica entre y=200 e y=132 — zona livre acima dos logos do background.
+ * Rodapé com:
+ * - Esquerda: prefeito + secretária (nomes impressos, sem linhas de assinatura)
+ * - Centro: data de emissão
+ * - Direita: texto de autenticidade + QR Code
+ *
+ * Zona segura: y entre 132 e 210 (acima dos logos do background)
  */
-function desenharRodape(page, f, dataEmissao, codigo, qrImage) {
-  const Y_SEP = 200;
+function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secretario) {
+  const Y_SEP = 210;
   linha(page, 56, Y_SEP, W - 56, Y_SEP, COR.dourado, 0.35);
 
-  // Esquerda: data e código
-  page.drawText(`Vacaria, ${dataEmissao}`, {
-    x: 60, y: Y_SEP - 18,
-    font: f.sans, size: 9, color: COR.cinza,
+  // ── ESQUERDA: Prefeito ─────────────────────────────────────
+  page.drawText(prefeito || 'Andre Luiz Rokoski', {
+    x: 60, y: Y_SEP - 16,
+    font: f.sansBold, size: 8, color: COR.preto,
   });
-  page.drawText(`Codigo de verificacao: ${codigo}`, {
-    x: 60, y: Y_SEP - 30,
+  page.drawText('Prefeito(a) Municipal de Vacaria/RS', {
+    x: 60, y: Y_SEP - 27,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
 
-  // Direita: QR Code
+  // ── CENTRO: Data ───────────────────────────────────────────
+  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, Y_SEP - 16, COR.cinza);
+  centro(page, `Codigo: ${codigo}`, f.sans, 7, Y_SEP - 27, COR.cinza);
+
+  // ── ESQUERDA INFERIOR: Secretária ──────────────────────────
+  page.drawText(secretario || 'Adriana Ferreira Boeira', {
+    x: 60, y: Y_SEP - 42,
+    font: f.sansBold, size: 8, color: COR.preto,
+  });
+  page.drawText('Secretaria Municipal de Educacao', {
+    x: 60, y: Y_SEP - 53,
+    font: f.sans, size: 7.5, color: COR.cinza,
+  });
+
+  // ── DIREITA: QR Code + texto ───────────────────────────────
   const QR_SIZE = 52;
   const QR_X    = W - QR_SIZE - 56;
-  const QR_Y    = Y_SEP - QR_SIZE - 4;
+  const QR_Y    = Y_SEP - QR_SIZE - 8;
 
   if (qrImage) {
     page.drawImage(qrImage, {
@@ -82,8 +100,7 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage) {
     });
   }
 
-  // Texto ao lado do QR Code
-  const TX = QR_X - 165;
+  const TX = QR_X - 168;
   const TY = QR_Y + QR_SIZE - 10;
   page.drawText('Autenticacao digital', {
     x: TX, y: TY,

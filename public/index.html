@@ -179,7 +179,7 @@
     <p>Secretaria Municipal de Educação · Vacaria / RS</p>
   </header>
 
-  <div class="card">
+ <div class="card">
     <div class="card-inner">
 
       <div class="mode-toggle">
@@ -283,7 +283,29 @@
             </button>
           </div>
         </div>
-        
+
+        <!-- Assinantes pré-preenchidos — editáveis em caso de mudança de cargo -->
+        <div class="section" style="border-top: 1px solid var(--border); padding-top: 24px;">
+          <div class="section-title">Assinantes</div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="secretario">Secretário(a) de Educação</label>
+              <input type="text" id="secretario" name="secretario"
+                     value="Adriana Ferreira Boeira"
+                     placeholder="Adriana Ferreira Boeira">
+            </div>
+            <div class="field">
+              <label for="prefeito">Prefeito(a)</label>
+              <input type="text" id="prefeito" name="prefeito"
+                     value="Andre Luiz Rokoski"
+                     placeholder="Andre Luiz Rokoski">
+            </div>
+          </div>
+          <p style="font-size:.72rem; color:var(--text-muted); margin-top:8px;">
+            Nomes impressos no certificado. Edite apenas em caso de mudança de cargo.
+          </p>
+        </div>
+
         <!-- ═══════════════════════════════════════════════════════ -->
         <!-- SEÇÃO: PRÉ-VISUALIZAÇÃO                               -->
         <!-- ═══════════════════════════════════════════════════════ -->
@@ -308,7 +330,7 @@
         <div class="section" style="border-top: 1px solid var(--border); padding-top: 24px; margin-bottom: 20px;">
           <div class="section-title">Geração em Lote</div>
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
-            Carregue um arquivo CSV para gerar múltiplos certificados de uma vez. 
+            Carregue um arquivo CSV para gerar múltiplos certificados de uma vez.
             <a href="#" onclick="downloadCSVTemplate(event)" style="color: var(--gold); text-decoration: none; font-weight: 500;">Baixar modelo</a>
           </p>
           <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -347,7 +369,7 @@
       </form>
     </div>
   </div>
-
+  
   <p class="footer-note">
     Certificado assinado digitalmente com <strong>certificado ICP-Brasil</strong>.
   </p>

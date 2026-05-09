@@ -7,6 +7,10 @@ const { fmtData, obterDataHoje } = require('../src/utils/formatter');
 const { gerarCodigoVerificacao, gerarURLVerificacao } = require('../src/utils/verificationCode');
 const { salvarCertificado } = require('../src/services/certificadoStore');
 
+// Valores padrão — sobrescritos se o formulário enviar outros
+const PREFEITO_PADRAO   = 'Andre Luiz Rokoski';
+const SECRETARIO_PADRAO = 'Adriana Ferreira Boeira';
+
 // ══════════════════════════════════════════════════════════════
 //  HANDLER SERVERLESS (Vercel)
 // ══════════════════════════════════════════════════════════════
@@ -21,12 +25,16 @@ module.exports = async function handler(req, res) {
     const b = req.body;
     const hoje = fmtData(obterDataHoje());
 
+    // Usa o valor do formulário se preenchido, senão usa o padrão
+    const prefeito   = (b.prefeito   && b.prefeito.trim())   || PREFEITO_PADRAO;
+    const secretario = (b.secretario && b.secretario.trim()) || SECRETARIO_PADRAO;
+
     let pdfBytes;
     let nomeArquivo;
     let periodo      = '';
     let periodoTexto = '';
 
-    // ── GERA CÓDIGO ÚNICO AQUI — usado tanto no PDF quanto no banco ──
+    // Gera código único aqui — usado tanto no PDF quanto no banco
     const codigoVerificacao = gerarCodigoVerificacao({
       nome:      b.nome,
       cargo:     b.cargo,
@@ -54,7 +62,6 @@ module.exports = async function handler(req, res) {
           ? `exercicio de ${anoI}`
           : 'periodo de referencia';
 
-      // ── GERAÇÃO ANUAL — passa código e URL já gerados ─────
       pdfBytes = await gerarAnual({
         nome:              b.nome        || 'Servidor(a)',
         cargo:             b.cargo       || '',
@@ -62,6 +69,8 @@ module.exports = async function handler(req, res) {
         periodoTexto,
         cursos:            Array.isArray(b.cursos) ? b.cursos : [],
         dataEmissao:       hoje,
+        prefeito,
+        secretario,
         codigoVerificacao,
         urlVerificacao,
       });
@@ -77,14 +86,13 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      // ── PERÍODO — corrigido para usar fmtData completo ────
+      // ── PERÍODO ───────────────────────────────────────────
       if (b.dataInicio && b.dataFim) {
         periodo = `${fmtData(b.dataInicio)} a ${fmtData(b.dataFim)}`;
       } else if (b.dataInicio) {
         periodo = `a partir de ${fmtData(b.dataInicio)}`;
       }
 
-      // ── GERAÇÃO INDIVIDUAL — passa código e URL já gerados ─
       pdfBytes = await gerarIndividual({
         nome:              b.nome         || 'Servidor(a)',
         cargo:             b.cargo        || '',
@@ -97,6 +105,8 @@ module.exports = async function handler(req, res) {
         instrutor:         b.instrutor    || '',
         instrCargo:        b.instrCargo   || '',
         dataEmissao:       hoje,
+        prefeito,
+        secretario,
         codigoVerificacao,
         urlVerificacao,
       });
@@ -121,6 +131,8 @@ module.exports = async function handler(req, res) {
       cursos:       b.cursos       || [],
       periodo,
       periodoTexto,
+      prefeito,
+      secretario,
       dataEmissao:  hoje,
     });
 
