@@ -47,7 +47,7 @@
     .erro-login { color: var(--red); font-size: .82rem; margin-top: 10px; display: none; }
 
     /* PAINEL */
-    .painel { max-width: 1000px; margin: 0 auto; display: none; }
+    .painel { max-width: 1100px; margin: 0 auto; display: none; }
     .painel-header {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
@@ -66,7 +66,7 @@
       cursor: pointer; color: var(--muted);
     }
 
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
     .stat-card { background: #fff; border-radius: var(--radius); padding: 16px 20px; border-left: 4px solid var(--border); }
     .stat-card.pendente { border-color: var(--gold); }
     .stat-card.aprovado { border-color: var(--green); }
@@ -74,15 +74,45 @@
     .stat-card .num { font-size: 1.8rem; font-weight: 600; color: var(--navy); }
     .stat-card .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 
+    /* BARRA DE AÇÃO EM LOTE */
+    .bulk-bar {
+      display: none; align-items: center; justify-content: space-between;
+      background: var(--navy); color: #fff; border-radius: var(--radius);
+      padding: 12px 20px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .bulk-bar.show { display: flex; }
+    .bulk-bar .info { font-size: .85rem; }
+    .bulk-bar .info strong { font-size: 1rem; }
+    .bulk-actions { display: flex; gap: 8px; }
+    .bulk-btn {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-family: 'Jost', sans-serif; font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .bulk-btn.aprovar  { background: var(--green); color: #fff; }
+    .bulk-btn.rejeitar { background: var(--red); color: #fff; }
+    .bulk-btn.limpar   { background: rgba(255,255,255,.15); color: #fff; }
+    .bulk-btn:hover { opacity: .85; }
+    .bulk-btn:disabled { opacity: .4; cursor: default; }
+
+    .select-all-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 4px;
+      font-size: .8rem; color: var(--muted);
+    }
+    .select-all-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
     .lista { display: flex; flex-direction: column; gap: 10px; }
     .cert-card {
       background: #fff; border-radius: var(--radius); padding: 20px 24px;
       box-shadow: 0 2px 8px rgba(13,31,60,.06);
       display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      transition: box-shadow .2s;
     }
-    .cert-status {
-      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    }
+    .cert-card.selected { box-shadow: 0 0 0 2px var(--navy); }
+
+    .cert-checkbox { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+
+    .cert-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .cert-status.pendente  { background: var(--gold); }
     .cert-status.aprovado  { background: var(--green); }
     .cert-status.rejeitado { background: var(--red); }
@@ -124,6 +154,7 @@
     @media (max-width: 600px) {
       .stats { grid-template-columns: 1fr; }
       .cert-card { flex-direction: column; align-items: flex-start; }
+      .bulk-bar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -169,6 +200,21 @@
     </div>
   </div>
 
+  <!-- Barra de ação em lote — aparece quando há seleção -->
+  <div class="bulk-bar" id="bulk-bar">
+    <div class="info"><strong id="bulk-count">0</strong> selecionado(s)</div>
+    <div class="bulk-actions">
+      <button class="bulk-btn aprovar"  id="bulk-aprovar"  onclick="acaoLote('aprovar')">✓ Aprovar selecionados</button>
+      <button class="bulk-btn rejeitar" id="bulk-rejeitar" onclick="acaoLote('rejeitar')">✕ Rejeitar selecionados</button>
+      <button class="bulk-btn limpar" onclick="limparSelecao()">Limpar seleção</button>
+    </div>
+  </div>
+
+  <div class="select-all-row" id="select-all-row" style="display:none;">
+    <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+    <label for="select-all">Selecionar todos os pendentes desta lista</label>
+  </div>
+
   <div class="lista" id="lista">
     <div class="loading-msg">Carregando...</div>
   </div>
@@ -177,6 +223,8 @@
 <script>
   let senhaAtual = '';
   let filtroAtual = 'pendentes';
+  let listaAtual = [];
+  let selecionados = new Set();
 
   function entrar() {
     const senha = document.getElementById('senha-input').value;
@@ -187,6 +235,7 @@
 
   function sair() {
     senhaAtual = '';
+    selecionados.clear();
     document.getElementById('senha-input').value = '';
     document.getElementById('login-wrap').style.display = 'block';
     document.getElementById('painel').style.display = 'none';
@@ -195,6 +244,7 @@
 
   function setFiltro(filtro, btn) {
     filtroAtual = filtro;
+    selecionados.clear();
     document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     carregarLista();
@@ -213,9 +263,10 @@
       document.getElementById('login-wrap').style.display = 'none';
       document.getElementById('painel').style.display = 'block';
 
-      const lista = await res.json();
-      renderLista(lista);
-      atualizarStats(lista);
+      listaAtual = await res.json();
+      renderLista(listaAtual);
+      atualizarStats(listaAtual);
+      atualizarBulkBar();
 
     } catch (err) {
       document.getElementById('lista').innerHTML = `<div class="vazio">Erro ao carregar: ${err.message}</div>`;
@@ -223,16 +274,18 @@
   }
 
   function atualizarStats(lista) {
-    const pendentes  = lista.filter(c => c.status === 'pendente').length;
-    const aprovados  = lista.filter(c => c.status === 'aprovado').length;
-    const rejeitados = lista.filter(c => c.status === 'rejeitado').length;
-    document.getElementById('stat-pendente').textContent  = pendentes;
-    document.getElementById('stat-aprovado').textContent  = aprovados;
-    document.getElementById('stat-rejeitado').textContent = rejeitados;
+    document.getElementById('stat-pendente').textContent  = lista.filter(c => c.status === 'pendente').length;
+    document.getElementById('stat-aprovado').textContent  = lista.filter(c => c.status === 'aprovado').length;
+    document.getElementById('stat-rejeitado').textContent = lista.filter(c => c.status === 'rejeitado').length;
   }
 
   function renderLista(lista) {
     const el = document.getElementById('lista');
+    const selectAllRow = document.getElementById('select-all-row');
+
+    const pendentesNaLista = lista.filter(c => c.status === 'pendente');
+    selectAllRow.style.display = pendentesNaLista.length > 0 ? 'flex' : 'none';
+
     if (lista.length === 0) {
       el.innerHTML = '<div class="vazio">Nenhum certificado encontrado.</div>';
       return;
@@ -240,16 +293,19 @@
 
     el.innerHTML = lista.map(cert => {
       const isPendente = cert.status === 'pendente';
+      const isSelected = selecionados.has(cert.codigo);
       const tipo = cert.tipo === 'anual' ? 'Anual' : 'Individual';
       const detalhe = cert.tipo === 'individual'
         ? `${cert.curso || '—'} · ${cert.cargaHoraria || '?'}h · ${cert.dataEmissao || ''}`
         : `${cert.periodoTexto || '—'} · ${cert.dataEmissao || ''}`;
-      const criadoEm = cert.criadoEm
-        ? new Date(cert.criadoEm).toLocaleString('pt-BR')
-        : '';
+      const criadoEm = cert.criadoEm ? new Date(cert.criadoEm).toLocaleString('pt-BR') : '';
 
       return `
-        <div class="cert-card" id="card-${cert.codigo}">
+        <div class="cert-card ${isSelected ? 'selected' : ''}" id="card-${cert.codigo}">
+          ${isPendente ? `
+            <input type="checkbox" class="cert-checkbox" ${isSelected ? 'checked' : ''}
+                   onchange="toggleSelecionado('${cert.codigo}', this)">
+          ` : `<div style="width:18px"></div>`}
           <div class="cert-status ${cert.status}"></div>
           <div class="cert-info">
             <div class="nome">${cert.nome || '—'} <span style="font-weight:400;color:var(--muted);font-size:.8rem;">(${tipo})</span></div>
@@ -268,12 +324,44 @@
     }).join('');
   }
 
+  function toggleSelecionado(codigo, checkbox) {
+    if (checkbox.checked) selecionados.add(codigo);
+    else selecionados.delete(codigo);
+    document.getElementById(`card-${codigo}`).classList.toggle('selected', checkbox.checked);
+    atualizarBulkBar();
+  }
+
+  function toggleSelectAll(checkbox) {
+    const pendentes = listaAtual.filter(c => c.status === 'pendente');
+    if (checkbox.checked) {
+      pendentes.forEach(c => selecionados.add(c.codigo));
+    } else {
+      pendentes.forEach(c => selecionados.delete(c.codigo));
+    }
+    renderLista(listaAtual);
+    atualizarBulkBar();
+  }
+
+  function limparSelecao() {
+    selecionados.clear();
+    document.getElementById('select-all').checked = false;
+    renderLista(listaAtual);
+    atualizarBulkBar();
+  }
+
+  function atualizarBulkBar() {
+    const bar = document.getElementById('bulk-bar');
+    const count = selecionados.size;
+    document.getElementById('bulk-count').textContent = count;
+    bar.classList.toggle('show', count > 0);
+  }
+
   async function acao(codigo, tipo) {
-    const card      = document.getElementById(`card-${codigo}`);
-    const btnAprova = card.querySelector('.btn-aprovar');
+    const card       = document.getElementById(`card-${codigo}`);
+    const btnAprova  = card.querySelector('.btn-aprovar');
     const btnRejeita = card.querySelector('.btn-rejeitar');
 
-    if (btnAprova)  { btnAprova.disabled  = true; btnAprova.innerHTML  = '<span class="spinner-inline"></span>'; }
+    if (btnAprova)  { btnAprova.disabled  = true; btnAprova.innerHTML = '<span class="spinner-inline"></span>'; }
     if (btnRejeita) { btnRejeita.disabled = true; }
 
     try {
@@ -282,18 +370,10 @@
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ senha: senhaAtual, codigo, acao: tipo }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
 
-      // Atualiza o card visualmente sem recarregar tudo
-      const novoStatus = data.status;
-      card.querySelector('.cert-status').className = `cert-status ${novoStatus}`;
-      card.querySelector('.badge').className        = `badge ${novoStatus}`;
-      card.querySelector('.badge').textContent      = novoStatus;
-      card.querySelector('.acoes')?.remove();
-
-      // Atualiza stats
+      selecionados.delete(codigo);
       carregarLista();
 
     } catch (err) {
@@ -303,7 +383,46 @@
     }
   }
 
-  // Foca no campo de senha ao carregar
+  async function acaoLote(tipo) {
+    if (selecionados.size === 0) return;
+
+    const codigos = Array.from(selecionados);
+    const confirmText = tipo === 'aprovar'
+      ? `Aprovar ${codigos.length} certificado(s)?`
+      : `Rejeitar ${codigos.length} certificado(s)?`;
+    if (!confirm(confirmText)) return;
+
+    const btnAprovar  = document.getElementById('bulk-aprovar');
+    const btnRejeitar = document.getElementById('bulk-rejeitar');
+    btnAprovar.disabled  = true;
+    btnRejeitar.disabled = true;
+    const btnAlvo = tipo === 'aprovar' ? btnAprovar : btnRejeitar;
+    const textoOriginal = btnAlvo.textContent;
+    btnAlvo.innerHTML = '<span class="spinner-inline"></span> Processando...';
+
+    try {
+      const res = await fetch('/api/admin/certificado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ senha: senhaAtual, codigos, acao: tipo }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+
+      selecionados.clear();
+      alert(`✓ ${data.processados} certificado(s) atualizados com sucesso!` +
+            (data.falhas > 0 ? `\n⚠ ${data.falhas} falha(s).` : ''));
+      carregarLista();
+
+    } catch (err) {
+      alert(`Erro: ${err.message}`);
+    } finally {
+      btnAprovar.disabled  = false;
+      btnRejeitar.disabled = false;
+      btnAlvo.textContent = textoOriginal;
+    }
+  }
+
   document.getElementById('senha-input').focus();
 </script>
 </body>
