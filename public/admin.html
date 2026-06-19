@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin — Certificados SMED</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #0D1F3C;
+      --green:  #2E6B4F;
+      --gold:   #B8973A;
+      --red:    #c0392b;
+      --cream:  #FAF8F3;
+      --border: #DDD8CC;
+      --text:   #2A2A2A;
+      --muted:  #6B6B6B;
+      --radius: 10px;
+    }
+    body { font-family: 'Jost', sans-serif; background: var(--cream); min-height: 100vh; padding: 32px 16px; }
+
+    /* LOGIN */
+    .login-wrap {
+      max-width: 380px; margin: 80px auto;
+      background: #fff; border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(13,31,60,.12); padding: 40px;
+    }
+    .login-wrap h1 { font-size: 1.3rem; color: var(--navy); margin-bottom: 8px; }
+    .login-wrap p  { font-size: .82rem; color: var(--muted); margin-bottom: 24px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .input-group label { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .input-group input {
+      padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: 'Jost', sans-serif;
+      font-size: .9rem; outline: none;
+    }
+    .input-group input:focus { border-color: var(--navy); }
+    .btn-primary {
+      width: 100%; padding: 13px; background: var(--navy); color: #fff;
+      border: none; border-radius: 8px; font-family: 'Jost', sans-serif;
+      font-size: .88rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .erro-login { color: var(--red); font-size: .82rem; margin-top: 10px; display: none; }
+
+    /* PAINEL */
+    .painel { max-width: 1000px; margin: 0 auto; display: none; }
+    .painel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .painel-header h1 { font-size: 1.4rem; color: var(--navy); }
+    .filtros { display: flex; gap: 8px; }
+    .filtro-btn {
+      padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 20px;
+      background: #fff; font-family: 'Jost', sans-serif; font-size: .78rem;
+      font-weight: 500; cursor: pointer; color: var(--muted); transition: all .2s;
+    }
+    .filtro-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .sair-btn {
+      padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 20px;
+      background: #fff; font-family: 'Jost', sans-serif; font-size: .78rem;
+      cursor: pointer; color: var(--muted);
+    }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border-radius: var(--radius); padding: 16px 20px; border-left: 4px solid var(--border); }
+    .stat-card.pendente { border-color: var(--gold); }
+    .stat-card.aprovado { border-color: var(--green); }
+    .stat-card.rejeitado { border-color: var(--red); }
+    .stat-card .num { font-size: 1.8rem; font-weight: 600; color: var(--navy); }
+    .stat-card .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    .lista { display: flex; flex-direction: column; gap: 10px; }
+    .cert-card {
+      background: #fff; border-radius: var(--radius); padding: 20px 24px;
+      box-shadow: 0 2px 8px rgba(13,31,60,.06);
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .cert-status {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .cert-status.pendente  { background: var(--gold); }
+    .cert-status.aprovado  { background: var(--green); }
+    .cert-status.rejeitado { background: var(--red); }
+
+    .cert-info { flex: 1; min-width: 200px; }
+    .cert-info .nome { font-size: .95rem; font-weight: 600; color: var(--navy); }
+    .cert-info .detalhe { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+    .cert-info .codigo { font-size: .72rem; color: var(--muted); margin-top: 4px; font-family: monospace; }
+
+    .badge {
+      padding: 4px 10px; border-radius: 20px; font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .badge.pendente  { background: #fef3cd; color: #856404; }
+    .badge.aprovado  { background: #d1e7dd; color: #0f5132; }
+    .badge.rejeitado { background: #f8d7da; color: #842029; }
+
+    .acoes { display: flex; gap: 8px; }
+    .btn-aprovar, .btn-rejeitar {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-family: 'Jost', sans-serif; font-size: .78rem; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-aprovar  { background: var(--green); color: #fff; }
+    .btn-rejeitar { background: var(--red);   color: #fff; }
+    .btn-aprovar:hover, .btn-rejeitar:hover { opacity: .85; }
+    .btn-aprovar:disabled, .btn-rejeitar:disabled { opacity: .4; cursor: default; }
+
+    .vazio { text-align: center; padding: 48px; color: var(--muted); font-size: .9rem; }
+    .loading-msg { text-align: center; padding: 32px; color: var(--muted); }
+
+    .spinner-inline {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+      border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr; }
+      .cert-card { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <h1>Painel Administrativo</h1>
+  <p>Secretaria Municipal de Educação — Vacaria/RS</p>
+  <div class="input-group">
+    <label>Senha de acesso</label>
+    <input type="password" id="senha-input" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') entrar()">
+  </div>
+  <button class="btn-primary" onclick="entrar()">Entrar</button>
+  <p class="erro-login" id="erro-login">Senha incorreta. Tente novamente.</p>
+</div>
+
+<!-- PAINEL -->
+<div class="painel" id="painel">
+  <div class="painel-header">
+    <h1>Certificados Gerados</h1>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div class="filtros">
+        <button class="filtro-btn active" onclick="setFiltro('pendentes', this)">Pendentes</button>
+        <button class="filtro-btn" onclick="setFiltro('todos', this)">Todos</button>
+      </div>
+      <button class="sair-btn" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card pendente">
+      <div class="num" id="stat-pendente">—</div>
+      <div class="lbl">Pendentes</div>
+    </div>
+    <div class="stat-card aprovado">
+      <div class="num" id="stat-aprovado">—</div>
+      <div class="lbl">Aprovados</div>
+    </div>
+    <div class="stat-card rejeitado">
+      <div class="num" id="stat-rejeitado">—</div>
+      <div class="lbl">Rejeitados</div>
+    </div>
+  </div>
+
+  <div class="lista" id="lista">
+    <div class="loading-msg">Carregando...</div>
+  </div>
+</div>
+
+<script>
+  let senhaAtual = '';
+  let filtroAtual = 'pendentes';
+
+  function entrar() {
+    const senha = document.getElementById('senha-input').value;
+    if (!senha) return;
+    senhaAtual = senha;
+    carregarLista();
+  }
+
+  function sair() {
+    senhaAtual = '';
+    document.getElementById('senha-input').value = '';
+    document.getElementById('login-wrap').style.display = 'block';
+    document.getElementById('painel').style.display = 'none';
+    document.getElementById('erro-login').style.display = 'none';
+  }
+
+  function setFiltro(filtro, btn) {
+    filtroAtual = filtro;
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    carregarLista();
+  }
+
+  async function carregarLista() {
+    try {
+      const res = await fetch(`/api/admin/certificado?senha=${encodeURIComponent(senhaAtual)}&filtro=${filtroAtual}`);
+
+      if (res.status === 401) {
+        document.getElementById('erro-login').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('erro-login').style.display = 'none';
+      document.getElementById('login-wrap').style.display = 'none';
+      document.getElementById('painel').style.display = 'block';
+
+      const lista = await res.json();
+      renderLista(lista);
+      atualizarStats(lista);
+
+    } catch (err) {
+      document.getElementById('lista').innerHTML = `<div class="vazio">Erro ao carregar: ${err.message}</div>`;
+    }
+  }
+
+  function atualizarStats(lista) {
+    const pendentes  = lista.filter(c => c.status === 'pendente').length;
+    const aprovados  = lista.filter(c => c.status === 'aprovado').length;
+    const rejeitados = lista.filter(c => c.status === 'rejeitado').length;
+    document.getElementById('stat-pendente').textContent  = pendentes;
+    document.getElementById('stat-aprovado').textContent  = aprovados;
+    document.getElementById('stat-rejeitado').textContent = rejeitados;
+  }
+
+  function renderLista(lista) {
+    const el = document.getElementById('lista');
+    if (lista.length === 0) {
+      el.innerHTML = '<div class="vazio">Nenhum certificado encontrado.</div>';
+      return;
+    }
+
+    el.innerHTML = lista.map(cert => {
+      const isPendente = cert.status === 'pendente';
+      const tipo = cert.tipo === 'anual' ? 'Anual' : 'Individual';
+      const detalhe = cert.tipo === 'individual'
+        ? `${cert.curso || '—'} · ${cert.cargaHoraria || '?'}h · ${cert.dataEmissao || ''}`
+        : `${cert.periodoTexto || '—'} · ${cert.dataEmissao || ''}`;
+      const criadoEm = cert.criadoEm
+        ? new Date(cert.criadoEm).toLocaleString('pt-BR')
+        : '';
+
+      return `
+        <div class="cert-card" id="card-${cert.codigo}">
+          <div class="cert-status ${cert.status}"></div>
+          <div class="cert-info">
+            <div class="nome">${cert.nome || '—'} <span style="font-weight:400;color:var(--muted);font-size:.8rem;">(${tipo})</span></div>
+            <div class="detalhe">${detalhe}</div>
+            <div class="detalhe">${cert.cargo || ''} ${cert.matricula ? '· Mat: ' + cert.matricula : ''}</div>
+            <div class="codigo">Código: ${cert.codigo} · Gerado em: ${criadoEm}</div>
+          </div>
+          <span class="badge ${cert.status}">${cert.status}</span>
+          ${isPendente ? `
+          <div class="acoes">
+            <button class="btn-aprovar"  onclick="acao('${cert.codigo}', 'aprovar')">✓ Aprovar</button>
+            <button class="btn-rejeitar" onclick="acao('${cert.codigo}', 'rejeitar')">✕ Rejeitar</button>
+          </div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function acao(codigo, tipo) {
+    const card      = document.getElementById(`card-${codigo}`);
+    const btnAprova = card.querySelector('.btn-aprovar');
+    const btnRejeita = card.querySelector('.btn-rejeitar');
+
+    if (btnAprova)  { btnAprova.disabled  = true; btnAprova.innerHTML  = '<span class="spinner-inline"></span>'; }
+    if (btnRejeita) { btnRejeita.disabled = true; }
+
+    try {
+      const res = await fetch('/api/admin/certificado', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ senha: senhaAtual, codigo, acao: tipo }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+
+      // Atualiza o card visualmente sem recarregar tudo
+      const novoStatus = data.status;
+      card.querySelector('.cert-status').className = `cert-status ${novoStatus}`;
+      card.querySelector('.badge').className        = `badge ${novoStatus}`;
+      card.querySelector('.badge').textContent      = novoStatus;
+      card.querySelector('.acoes')?.remove();
+
+      // Atualiza stats
+      carregarLista();
+
+    } catch (err) {
+      if (btnAprova)  { btnAprova.disabled  = false; btnAprova.textContent  = '✓ Aprovar'; }
+      if (btnRejeita) { btnRejeita.disabled = false; }
+      alert(`Erro: ${err.message}`);
+    }
+  }
+
+  // Foca no campo de senha ao carregar
+  document.getElementById('senha-input').focus();
+</script>
+</body>
+</html>
