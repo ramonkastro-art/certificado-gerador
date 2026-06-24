@@ -435,6 +435,10 @@ function addCourse() {
         <input type="date" class="course-fim" data-id="${n}">
       </div>
     </div>
+    <div class="field" style="margin-top:12px">
+      <label>Local / Instituição (opcional)</label>
+      <input type="text" class="course-local" data-id="${n}" placeholder="Ex: Vacaria, RS">
+    </div>
   `;
   list.appendChild(div);
 }
@@ -501,7 +505,6 @@ function collectFormData() {
   };
 
   if (tipo === 'individual') {
-    // Modo único
     const curso = document.getElementById('curso').value.trim();
     const horas = document.getElementById('horas').value.trim();
     const dataInicio = document.getElementById('dataInicio').value;
@@ -519,28 +522,29 @@ function collectFormData() {
     payload.local = local;
     if (instrCargo) payload.instrCargo = instrCargo;
     if (modalidade) payload.modalidade = modalidade;
+
   } else if (tipo === 'anual') {
-    // Modo múltiplo
     const periodoInicio = document.getElementById('periodoInicio').value;
     const periodoFim = document.getElementById('periodoFim').value;
-    
+
     if (periodoInicio) payload.periodoInicio = periodoInicio;
     if (periodoFim) payload.periodoFim = periodoFim;
 
     const cursos = [];
     document.querySelectorAll('.course-item').forEach((item) => {
       const curso = {
-        nome: item.querySelector('.course-nome').value.trim(),
+        nome:      item.querySelector('.course-nome').value.trim(),
         instrutor: item.querySelector('.course-instrutor').value.trim(),
-        horas: item.querySelector('.course-horas').value.trim(),
-        inicio: item.querySelector('.course-inicio').value,
-        fim: item.querySelector('.course-fim').value,
+        horas:     item.querySelector('.course-horas').value.trim(),
+        inicio:    item.querySelector('.course-inicio').value,
+        fim:       item.querySelector('.course-fim').value,
+        local:     item.querySelector('.course-local')?.value.trim() || '',
       };
-      if (curso.nome && curso.instrutor && curso.horas && curso.inicio) {
+      if (curso.nome && curso.horas && curso.inicio) {
         cursos.push(curso);
       }
     });
-    
+
     payload.cursos = cursos;
   }
 

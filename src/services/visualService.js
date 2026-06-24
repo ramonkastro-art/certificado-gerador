@@ -1,6 +1,6 @@
 const { COR, W, H } = require('../config/constants');
 const { linha } = require('../utils/drawing');
-const { centro, centroBloco } = require('../utils/text');
+const { centro } = require('../utils/text');
 
 // ══════════════════════════════════════════════════════════════
 //  ELEMENTOS VISUAIS REUTILIZÁVEIS
@@ -26,12 +26,10 @@ function desenharBorda(page) {
   }
 }
 
-// Marca d'água removida — background já contém os logos necessários
 async function desenharMarcaDagua(page, f, pdfDoc) {
-  // Intencionalmente vazio
+  // Intencionalmente vazio — background já contém os logos
 }
 
-// Cabeçalho sem logo — background já tem os logos
 async function desenharCabecalho(page, f, pdfDoc) {
   const y = H - 52;
   linha(page, 56, y + 14, W - 56, y + 14, COR.dourado, 0.4);
@@ -54,14 +52,14 @@ function desenharTitulo(page, f, yBase) {
 
 /**
  * Rodapé com:
- * - Esquerda: prefeito + secretária (nomes impressos, sem linhas de assinatura)
- * - Centro: data de emissão
- * - Direita: texto de autenticidade + QR Code
+ * - Esquerda: prefeito + secretária
+ * - Centro: texto itálico + data + código (com espaçamento maior entre eles)
+ * - Direita: QR Code + texto de autenticidade
  *
- * Zona segura: y entre 132 e 210 (acima dos logos do background)
+ * Zona segura: y entre 132 e 230
  */
 function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secretario) {
-  const Y_SEP = 210;
+  const Y_SEP = 230;
   linha(page, 56, Y_SEP, W - 56, Y_SEP, COR.dourado, 0.35);
 
   // ── ESQUERDA: Prefeito ─────────────────────────────────────
@@ -70,28 +68,30 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
     font: f.sansBold, size: 8, color: COR.preto,
   });
   page.drawText('Prefeito Municipal de Vacaria/RS', {
-    x: 60, y: Y_SEP - 27,
+    x: 60, y: Y_SEP - 28,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
-
-  // ── CENTRO: Data ───────────────────────────────────────────
-  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, Y_SEP - 16, COR.cinza);
-  centro(page, `Codigo: ${codigo}`, f.sans, 7, Y_SEP - 27, COR.cinza);
 
   // ── ESQUERDA INFERIOR: Secretária ──────────────────────────
   page.drawText(secretario || 'Adriana Ferreira Boeira', {
-    x: 60, y: Y_SEP - 42,
+    x: 60, y: Y_SEP - 48,
     font: f.sansBold, size: 8, color: COR.preto,
   });
   page.drawText('Secretária Municipal de Educação', {
-    x: 60, y: Y_SEP - 53,
+    x: 60, y: Y_SEP - 60,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
 
+  // ── CENTRO: texto itálico + data + código ─────────────────
+  // Espaçamento maior entre as três linhas (16px entre cada)
+  centro(page, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 8, Y_SEP - 16, COR.cinza);
+  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, Y_SEP - 36, COR.cinza);
+  centro(page, `Código: ${codigo}`, f.sans, 7.5, Y_SEP - 52, COR.cinza);
+
   // ── DIREITA: QR Code + texto ───────────────────────────────
-  const QR_SIZE = 52;
+  const QR_SIZE = 56;
   const QR_X    = W - QR_SIZE - 56;
-  const QR_Y    = Y_SEP - QR_SIZE - 8;
+  const QR_Y    = Y_SEP - QR_SIZE - 6;
 
   if (qrImage) {
     page.drawImage(qrImage, {
@@ -100,22 +100,22 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
     });
   }
 
-  const TX = QR_X - 168;
+  const TX = QR_X - 172;
   const TY = QR_Y + QR_SIZE - 10;
   page.drawText('Autenticação digital', {
     x: TX, y: TY,
     font: f.sansBold, size: 8, color: COR.verde,
   });
   page.drawText('Documento com validade jurídica.', {
-    x: TX, y: TY - 13,
+    x: TX, y: TY - 14,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
   page.drawText('Escaneie o QR Code para verificar', {
-    x: TX, y: TY - 24,
+    x: TX, y: TY - 26,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
   page.drawText('a autenticidade deste certificado.', {
-    x: TX, y: TY - 35,
+    x: TX, y: TY - 38,
     font: f.sans, size: 7.5, color: COR.cinza,
   });
 }
