@@ -56,11 +56,11 @@ module.exports = async function handler(req, res) {
 
       periodoTexto = anoI && anoF
         ? (anoI === anoF
-            ? `exercicio de ${anoI}`
-            : `periodo de ${anoI} a ${anoF}`)
+            ? `exercício de ${anoI}`
+            : `período de ${anoI} a ${anoF}`)
         : anoI
-          ? `exercicio de ${anoI}`
-          : 'periodo de referencia';
+          ? `exercício de ${anoI}`
+          : 'período de referência';
 
       pdfBytes = await gerarAnual({
         nome:              b.nome        || 'Servidor(a)',
