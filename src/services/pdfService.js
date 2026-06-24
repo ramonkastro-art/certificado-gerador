@@ -37,7 +37,7 @@ async function embedQRCode(pdfDoc, urlVerificacao) {
     const base64  = dataUrl.replace(/^data:image\/png;base64,/, '');
     return await pdfDoc.embedPng(Buffer.from(base64, 'base64'));
   } catch (err) {
-    console.warn('[pdfService] QR Code nao gerado:', err.message);
+    console.warn('[pdfService] QR Code não gerado:', err.message);
     return null;
   }
 }
@@ -71,7 +71,7 @@ async function gerarIndividual(d) {
   if (d.cargo || d.matricula) {
     const cargoStr = [
       d.cargo,
-      d.matricula ? `Matricula: ${d.matricula}` : null,
+      d.matricula ? `Matrícula: ${d.matricula}` : null,
     ].filter(Boolean).join('   —   ');
     centro(page, cargoStr, f.sans, 10, y, COR.cinza);
     y -= 30;
@@ -89,8 +89,8 @@ async function gerarIndividual(d) {
   y -= 24;
 
   const dets = [
-    d.cargaHoraria ? `Carga Horaria: ${d.cargaHoraria}h` : null,
-    d.periodo      ? `Periodo: ${d.periodo}`              : null,
+    d.cargaHoraria ? `Carga Horária: ${d.cargaHoraria}h` : null,
+    d.periodo      ? `Período: ${d.periodo}`              : null,
     d.modalidade   ? `Modalidade: ${d.modalidade}`        : null,
     d.local        ? `Local: ${d.local}`                  : null,
   ].filter(Boolean);
@@ -142,7 +142,7 @@ async function gerarAnual(d) {
   if (d.cargo || d.matricula) {
     const cargoStr = [
       d.cargo,
-      d.matricula ? `Matricula: ${d.matricula}` : null,
+      d.matricula ? `Matrícula: ${d.matricula}` : null,
     ].filter(Boolean).join('   —   ');
     centro(pgF, cargoStr, f.sans, 10, y, COR.cinza);
     y -= 30;
@@ -150,17 +150,17 @@ async function gerarAnual(d) {
     y -= 10;
   }
 
-  centro(pgF, 'concluiu com aproveitamento as capacitacoes e formacoes continuadas', f.regular, 12, y, COR.preto);
+  centro(pgF, 'concluiu com aproveitamento as capacitações e formações continuadas', f.regular, 12, y, COR.preto);
   y -= 22;
-  centro(pgF, `promovidas pela Secretaria Municipal de Educacao no ${d.periodoTexto},`, f.regular, 12, y, COR.preto);
+  centro(pgF, `promovidas pela Secretaria Municipal de Educação no ${d.periodoTexto},`, f.regular, 12, y, COR.preto);
   y -= 22;
-  centro(pgF, 'totalizando uma carga horaria de:', f.regular, 12, y, COR.preto);
+  centro(pgF, 'totalizando uma carga horária de:', f.regular, 12, y, COR.preto);
   y -= 46;
 
   centro(pgF, `${totalHoras} horas`, f.bold, 36, y, COR.verde);
   y -= 30;
 
-  centro(pgF, 'A relacao completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
+  centro(pgF, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
 
   desenharRodape(pgF, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
@@ -171,7 +171,7 @@ async function gerarAnual(d) {
 
   let yV = H - 48;
 
-  centro(pgV, 'RELACAO DE CURSOS REALIZADOS', f.sansBold, 11, yV, COR.verde);
+  centro(pgV, 'RELAÇÃO DE CURSOS REALIZADOS', f.sansBold, 11, yV, COR.verde);
   yV -= 16;
 
   const subtitulo = `${d.nome}${d.cargo ? '   —   ' + d.cargo : ''}   ·   ${d.periodoTexto}`;
@@ -182,11 +182,11 @@ async function gerarAnual(d) {
 
   const COLS = [
     { label: '#',                   x:  52, w:  22, align: 'center' },
-    { label: 'CURSO / TREINAMENTO', x:  78, w: 315, align: 'left'   },
-    { label: 'C.H.',                x: 397, w:  44, align: 'center' },
-    { label: 'PERIODO',             x: 445, w: 110, align: 'center' },
-    { label: 'MODALIDADE',          x: 559, w:  78, align: 'center' },
-    { label: 'LOCAL / INSTITUICAO', x: 641, w: 152, align: 'left'   },
+    { label: 'CURSO / TREINAMENTO', x:  78, w: 280, align: 'left'   },
+    { label: 'C.H.',                x: 362, w:  40, align: 'center' },
+    { label: 'PERÍODO',             x: 406, w: 110, align: 'center' },
+    { label: 'INSTRUTOR',           x: 520, w: 150, align: 'left'   },
+    { label: 'LOCAL / INSTITUIÇÃO', x: 674, w: 119, align: 'left'   },
   ];
 
   const ROW_H   = 19;
@@ -213,19 +213,20 @@ async function gerarAnual(d) {
 
     pgV.drawRectangle({ x: TABLE_X, y: yV - ROW_H + 4, width: TABLE_W, height: ROW_H, color: bg });
 
-    const periodo    = c.inicio && c.fim
+    const periodo      = c.inicio && c.fim
       ? `${fmtCurta(c.inicio)} a ${fmtCurta(c.fim)}`
       : c.inicio ? fmtCurta(c.inicio) : '-';
-    const nomeTrunc  = truncar(c.nome  || '-', f.sans, 8.5, COLS[1].w - 4);
-    const localTrunc = truncar(c.local || '-', f.sans, 8.5, COLS[5].w - 4);
+    const nomeTrunc     = truncar(c.nome      || '-', f.sans, 8.5, COLS[1].w - 4);
+    const instrutorTrunc = truncar(c.instrutor || '-', f.sans, 8,   COLS[4].w - 4);
+    const localTrunc    = truncar(c.local     || '-', f.sans, 8,   COLS[5].w - 4);
 
     const celulas = [
       { col: COLS[0], text: String(i + 1),                  font: f.sansBold, size: 8.5 },
       { col: COLS[1], text: nomeTrunc,                      font: f.sans,     size: 8.5 },
       { col: COLS[2], text: c.horas ? `${c.horas}h` : '-', font: f.sansBold, size: 8.5 },
-      { col: COLS[3], text: periodo,                        font: f.sans,     size: 8   },
-      { col: COLS[4], text: c.modalidade || '-',            font: f.sans,     size: 8   },
-      { col: COLS[5], text: localTrunc,                     font: f.sans,     size: 8   },
+      { col: COLS[3], text: periodo,                        font: f.sans,     size: 7.5 },
+      { col: COLS[4], text: instrutorTrunc,                 font: f.sans,     size: 7.5 },
+      { col: COLS[5], text: localTrunc,                     font: f.sans,     size: 7.5 },
     ];
 
     for (const cel of celulas) {
@@ -247,7 +248,7 @@ async function gerarAnual(d) {
     width: TABLE_W, height: ROW_H,
     color: COR.verdeBg, borderColor: COR.verde, borderWidth: 0.5,
   });
-  pgV.drawText('Total de Horas de Formacao:', {
+  pgV.drawText('Total de Horas de Formação:', {
     x: COLS[1].x, y: yV - ROW_H + 7,
     font: f.sansBold, size: 9, color: COR.verde,
   });
