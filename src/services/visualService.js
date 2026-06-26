@@ -53,10 +53,10 @@ function desenharTitulo(page, f, yBase) {
 /**
  * Rodapé com:
  * - Esquerda: prefeito + secretária
- * - Centro: texto itálico + data + código (com espaçamento maior entre eles)
+ * - Centro: data + código (sem texto de verso — esse aparece só no corpo quando necessário)
  * - Direita: QR Code + texto de autenticidade
  *
- * Zona segura: y entre 132 e 230
+ * Zona segura: y entre 132 e 230 (acima dos logos do background)
  */
 function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secretario) {
   const Y_SEP = 230;
@@ -82,11 +82,9 @@ function desenharRodape(page, f, dataEmissao, codigo, qrImage, prefeito, secreta
     font: f.sans, size: 7.5, color: COR.cinza,
   });
 
-  // ── CENTRO: texto itálico + data + código ─────────────────
-  // Espaçamento maior entre as três linhas (16px entre cada)
-  centro(page, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 8, Y_SEP - 16, COR.cinza);
-  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, Y_SEP - 36, COR.cinza);
-  centro(page, `Código: ${codigo}`, f.sans, 7.5, Y_SEP - 52, COR.cinza);
+  // ── CENTRO: Data + Código ──────────────────────────────────
+  centro(page, `Vacaria, ${dataEmissao}`, f.sans, 8.5, Y_SEP - 26, COR.cinza);
+  centro(page, `Código: ${codigo}`, f.sans, 7.5, Y_SEP - 44, COR.cinza);
 
   // ── DIREITA: QR Code + texto ───────────────────────────────
   const QR_SIZE = 56;

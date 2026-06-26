@@ -158,9 +158,10 @@ async function gerarAnual(d) {
   y -= 46;
 
   centro(pgF, `${totalHoras} horas`, f.bold, 36, y, COR.verde);
-  y -= 30;
+  y -= 36;
 
-  centro(pgF, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 10, y, COR.cinza);
+  // Texto de verso — aparece apenas no corpo da frente, NÃO no rodapé
+  centro(pgF, 'A relação completa dos cursos consta no verso deste certificado.', f.italic, 9, y, COR.cinza);
 
   desenharRodape(pgF, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
@@ -180,13 +181,14 @@ async function gerarAnual(d) {
   linha(pgV, 50, yV, W - 50, yV, COR.dourado, 0.7);
   yV -= 6;
 
+  // Colunas ajustadas — LOCAL/INSTITUIÇÃO mais larga
   const COLS = [
     { label: '#',                   x:  52, w:  22, align: 'center' },
-    { label: 'CURSO / TREINAMENTO', x:  78, w: 280, align: 'left'   },
-    { label: 'C.H.',                x: 362, w:  40, align: 'center' },
-    { label: 'PERÍODO',             x: 406, w: 110, align: 'center' },
-    { label: 'INSTRUTOR',           x: 520, w: 150, align: 'left'   },
-    { label: 'LOCAL / INSTITUIÇÃO', x: 674, w: 119, align: 'left'   },
+    { label: 'CURSO / TREINAMENTO', x:  78, w: 260, align: 'left'   },
+    { label: 'C.H.',                x: 342, w:  40, align: 'center' },
+    { label: 'PERÍODO',             x: 386, w: 110, align: 'center' },
+    { label: 'INSTRUTOR',           x: 500, w: 140, align: 'left'   },
+    { label: 'LOCAL / INSTITUIÇÃO', x: 644, w: 149, align: 'left'   },
   ];
 
   const ROW_H   = 19;
@@ -213,12 +215,12 @@ async function gerarAnual(d) {
 
     pgV.drawRectangle({ x: TABLE_X, y: yV - ROW_H + 4, width: TABLE_W, height: ROW_H, color: bg });
 
-    const periodo      = c.inicio && c.fim
+    const periodo        = c.inicio && c.fim
       ? `${fmtCurta(c.inicio)} a ${fmtCurta(c.fim)}`
       : c.inicio ? fmtCurta(c.inicio) : '-';
-    const nomeTrunc     = truncar(c.nome      || '-', f.sans, 8.5, COLS[1].w - 4);
+    const nomeTrunc      = truncar(c.nome      || '-', f.sans, 8.5, COLS[1].w - 4);
     const instrutorTrunc = truncar(c.instrutor || '-', f.sans, 8,   COLS[4].w - 4);
-    const localTrunc    = truncar(c.local     || '-', f.sans, 8,   COLS[5].w - 4);
+    const localTrunc     = truncar(c.local     || '-', f.sans, 8,   COLS[5].w - 4);
 
     const celulas = [
       { col: COLS[0], text: String(i + 1),                  font: f.sansBold, size: 8.5 },
@@ -243,6 +245,7 @@ async function gerarAnual(d) {
     yV -= ROW_H;
   }
 
+  // Linha de total
   pgV.drawRectangle({
     x: TABLE_X, y: yV - ROW_H + 4,
     width: TABLE_W, height: ROW_H,
@@ -259,6 +262,7 @@ async function gerarAnual(d) {
     font: f.sansBold, size: 10, color: COR.verde,
   });
 
+  // Rodapé do verso — sem texto de "relação completa"
   desenharRodape(pgV, f, d.dataEmissao, d.codigoVerificacao, qrImage, d.prefeito, d.secretario);
 
   return pdfDoc.save();
