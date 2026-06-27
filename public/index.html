@@ -358,6 +358,13 @@
         </div>
 
         <div class="submit-wrap">
+          <!-- Botão de reaproveitar cursos — aparece após gerar o primeiro certificado anual -->
+          <button type="button" class="submit-btn" id="btn-reaproveitar"
+                  onclick="reaproveitarCursos()"
+                  style="display:none; background: var(--gold); margin-bottom: 12px; box-shadow: 0 4px 16px rgba(184,151,58,.3);">
+            <span class="btn-label">↩ Manter cursos do certificado anterior</span>
+          </button>
+
           <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
             <span class="spinner"></span>
             <span class="btn-label">📜 &nbsp;Gerar &amp; baixar certificado</span>
@@ -623,27 +630,123 @@ function validateForm() {
 }
 
 /**
+ * Salva os cursos atuais na memória do navegador para reaproveitamento
+ */
+function salvarCursosNaMemoria() {
+  const items = document.querySelectorAll('.course-item');
+  if (items.length === 0) return;
+
+  const cursos = [];
+  items.forEach((item) => {
+    cursos.push({
+      nome:      item.querySelector('.course-nome')?.value.trim()     || '',
+      instrutor: item.querySelector('.course-instrutor')?.value.trim() || '',
+      horas:     item.querySelector('.course-horas')?.value.trim()    || '',
+      inicio:    item.querySelector('.course-inicio')?.value          || '',
+      fim:       item.querySelector('.course-fim')?.value             || '',
+      local:     item.querySelector('.course-local')?.value.trim()    || '',
+    });
+  });
+
+  window._cursosMemorizados = cursos;
+
+  // Mostra o botão de reaproveitar se estivermos no modo múltiplo
+  const btnReaproveitar = document.getElementById('btn-reaproveitar');
+  if (btnReaproveitar && cursos.length > 0) {
+    btnReaproveitar.style.display = 'flex';
+    btnReaproveitar.querySelector('.btn-label').textContent =
+      `↩ Manter ${cursos.length} curso(s) do certificado anterior`;
+  }
+}
+
+/**
+ * Restaura os cursos memorizados e limpa apenas os dados do participante
+ */
+function reaproveitarCursos() {
+  const cursos = window._cursosMemorizados;
+  if (!cursos || cursos.length === 0) return;
+
+  // Limpa apenas os campos do participante
+  document.getElementById('nome').value      = '';
+  document.getElementById('cargo').value     = '';
+  document.getElementById('matricula').value = '';
+
+  // Garante que estamos no modo múltiplo
+  setMode('multi');
+
+  // Limpa a lista atual e recria com os cursos memorizados
+  const list = document.getElementById('course-list');
+  list.innerHTML = '';
+  courseCount = 0;
+
+  cursos.forEach((c) => {
+    courseCount++;
+    const n   = courseCount;
+    const num = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'course-item';
+    div.id = `course-${n}`;
+    div.innerHTML = `
+      <div class="item-label">Curso ${num}</div>
+      <button type="button" class="remove-btn" onclick="removeCourse(${n})" title="Remover">✕</button>
+      <div class="field" style="margin-bottom:12px">
+        <label>Nome do curso</label>
+        <input type="text" class="course-nome" data-id="${n}"
+               value="${c.nome}" placeholder="Ex: Gestão em Sala de Aula" required>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Instrutor / Palestrante</label>
+        <input type="text" class="course-instrutor" data-id="${n}"
+               value="${c.instrutor}" placeholder="Prof. João da Silva" required>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Carga horária (h)</label>
+          <input type="number" class="course-horas" data-id="${n}"
+                 min="1" value="${c.horas}" placeholder="20" required>
+        </div>
+        <div class="field">
+          <label>Data de início</label>
+          <input type="date" class="course-inicio" data-id="${n}" value="${c.inicio}" required>
+        </div>
+        <div class="field">
+          <label>Data de término</label>
+          <input type="date" class="course-fim" data-id="${n}" value="${c.fim}">
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Local / Instituição (opcional)</label>
+        <input type="text" class="course-local" data-id="${n}"
+               value="${c.local}" placeholder="Ex: Vacaria, RS">
+      </div>
+    `;
+    list.appendChild(div);
+  });
+
+  // Rola para o topo para preencher o participante
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('nome').focus();
+
+  showMessage('✓ Cursos mantidos! Preencha os dados do próximo servidor.', false);
+}
+
+/**
  * Envia o formulário via fetch JSON para /api/gerar-certificado
  */
 async function submitForm() {
   clearMessage();
 
-  // Valida dados
-  if (!validateForm()) {
-    return;
-  }
+  if (!validateForm()) return;
 
   const btn = document.getElementById('submit-btn');
   btn.classList.add('loading');
 
   try {
     const payload = collectFormData();
-    
+
     const response = await fetch('/api/gerar-certificado', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
@@ -654,16 +757,22 @@ async function submitForm() {
 
     // Sucesso: baixar PDF
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
     a.download = `certificado_${document.getElementById('nome').value.replace(/\s+/g, '_')}.pdf`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     a.remove();
 
+    // Se estava no modo múltiplo, salva os cursos para reaproveitar
+    if (document.getElementById('tipo-hidden').value === 'anual') {
+      salvarCursosNaMemoria();
+    }
+
     showMessage('✓ Certificado gerado e baixado com sucesso!', false);
+
   } catch (error) {
     console.error('Erro:', error);
     showMessage(`✗ Erro ao gerar certificado: ${error.message}`);
